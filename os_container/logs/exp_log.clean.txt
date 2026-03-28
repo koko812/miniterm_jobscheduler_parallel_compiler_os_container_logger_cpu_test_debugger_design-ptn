@@ -1,0 +1,421 @@
+
+┝ miniterm_jobscheduler_compiler_os_container <main> (26-03-15 1:19:41)
+% cd os_container 
+┝ os_container <main> (26-03-15 1:19:51)
+% ls
+
+┝ os_container <main> (26-03-15 1:19:52)
+% docker run --rm -it ubuntu:latest
+Unable to find image 'ubuntu:latest' locally
+latest: Pulling from library/ubuntu
+66a4bbbfab88: Download complete 
+Digest: sha256:d1e2e92c075e5ca139d51a140fff46f84315c0fdce203eab2807c7e495eff4f9
+Status: Downloaded newer image for ubuntu:latest
+root@ce8a7475cf3e:/# cat /ets/os-release
+cat: /ets/os-release: No such file or directory
+root@ce8a7475cf3e:/# cat /etc/os-release 
+PRETTY_NAME="Ubuntu 24.04.4 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+VERSION="24.04.4 LTS (Noble Numbat)"
+VERSION_CODENAME=noble
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=noble
+LOGO=ubuntu-logo
+root@ce8a7475cf3e:/# exit
+exit
+
+┝ os_container <main> (26-03-15 1:23:56)
+% docker run --rm -d --name web -p 8080:80 nginx:latest
+Unable to find image 'nginx:latest' locally
+latest: Pulling from library/nginx
+a87363d30ab0: Download complete 
+7e3a4af256ee: Download complete 
+3b66ab8c894c: Download complete 
+2e1e80a9149a: Download complete 
+fbeac1abb084: Download complete 
+fca7a914ec95: Download complete 
+d456cad1d0ff: Download complete 
+Digest: sha256:bc45d248c4e1d1709321de61566eb2b64d4f0e32765239d66573666be7f13349
+Status: Downloaded newer image for nginx:latest
+caeda84388b99a30f886c024f97fa4626c63e769b8cbdfd36058ae78281a52fa
+
+┝ os_container <main> (26-03-15 1:30:20)
+% docker ps                                            
+CONTAINER ID   IMAGE          COMMAND                   CREATED          STATUS          PORTS                  NAMES
+caeda84388b9   nginx:latest   "/docker-entrypoint.…"   13 seconds ago   Up 11 seconds   0.0.0.0:8080->80/tcp   web
+
+┝ os_container <main> (26-03-15 1:30:31)
+% curl http://localhost:8080
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, nginx is successfully installed and working.
+Further configuration is required for the web server, reverse proxy, 
+API gateway, load balancer, content cache, or other features.</p>
+
+<p>For online documentation and support please refer to
+<a href="https://nginx.org/">nginx.org</a>.<br/>
+To engage with the community please visit
+<a href="https://community.nginx.org/">community.nginx.org</a>.<br/>
+For enterprise grade support, professional services, additional 
+security features and capabilities please refer to
+<a href="https://f5.com/nginx">f5.com/nginx</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+┝ os_container <main> (26-03-15 1:30:49)
+% curl http://localhost:8000
+curl: (7) Failed to connect to localhost port 8000 after 0 ms: Couldn't connect to server
+
+┝ os_container <main> (26-03-15 1:30:57)
+% curl http://localhost:8080
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, nginx is successfully installed and working.
+Further configuration is required for the web server, reverse proxy, 
+API gateway, load balancer, content cache, or other features.</p>
+
+<p>For online documentation and support please refer to
+<a href="https://nginx.org/">nginx.org</a>.<br/>
+To engage with the community please visit
+<a href="https://community.nginx.org/">community.nginx.org</a>.<br/>
+For enterprise grade support, professional services, additional 
+security features and capabilities please refer to
+<a href="https://f5.com/nginx">f5.com/nginx</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+┝ os_container <main> (26-03-15 1:31:00)
+% docker run --rm -d --name web_a -p 8080:80 httpd:latest
+
+Unable to find image 'httpd:latest' locally
+^Cdocker: Post "http://%2FUsers%2Fkoko%2F.docker%2Frun%2Fdocker.sock/v1.47/images/create?fromImage=httpd&tag=latest": context canceled.
+See 'docker run --help'.
+
+┝ os_container <main> (26-03-15 1:31:18)
+% docker run --rm -d --name web_a -p 8081:80 httpd:latest
+
+Unable to find image 'httpd:latest' locally
+latest: Pulling from library/httpd
+27ed71ae6c03: Download complete 
+9c9609b2ce48: Download complete 
+4f4fb700ef54: Already exists 
+1da3e7111293: Download complete 
+45478666420e: Download complete 
+Digest: sha256:96b1e8f69ee3adde956e819f7a7c3e706edef7ad88a26a491734015e5c595333
+Status: Downloaded newer image for httpd:latest
+544bba0bffd70871e420a2acc208133b50fe105513ebcec0bcc61edfa1548b3c
+
+┝ os_container <main> (26-03-15 1:31:30)
+% curl http://localhost:8080                             
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, nginx is successfully installed and working.
+Further configuration is required for the web server, reverse proxy, 
+API gateway, load balancer, content cache, or other features.</p>
+
+<p>For online documentation and support please refer to
+<a href="https://nginx.org/">nginx.org</a>.<br/>
+To engage with the community please visit
+<a href="https://community.nginx.org/">community.nginx.org</a>.<br/>
+For enterprise grade support, professional services, additional 
+security features and capabilities please refer to
+<a href="https://f5.com/nginx">f5.com/nginx</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+┝ os_container <main> (26-03-15 1:31:34)
+% curl http://localhost:8081
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>It works! Apache httpd</title>
+</head>
+<body>
+<p>It works!</p>
+</body>
+</html>
+
+┝ os_container <main> (26-03-15 1:31:35)
+% docker ps                                              
+CONTAINER ID   IMAGE          COMMAND                   CREATED         STATUS         PORTS                  NAMES
+544bba0bffd7   httpd:latest   "httpd-foreground"        4 minutes ago   Up 4 minutes   0.0.0.0:8081->80/tcp   web_a
+caeda84388b9   nginx:latest   "/docker-entrypoint.…"   5 minutes ago   Up 5 minutes   0.0.0.0:8080->80/tcp   web
+
+┝ os_container <main> (26-03-15 1:35:53)
+% docker network create net_a
+5eb2c1fd3a29a96424ccb414a4847ea5ef044028578a9b92cba79e430fe0c0ec
+
+┝ os_container <main> (26-03-15 1:39:07)
+% docker network create net_b
+19f1aefb3f42482c72f1338bfd2363e13c14b4827451797cf4028c81df4d3297
+
+┝ os_container <main> (26-03-15 1:39:09)
+% docker ls                  
+docker: 'ls' is not a docker command.
+See 'docker --help'
+
+┝ os_container <main> (26-03-15 1:39:16)
+% docker ps
+CONTAINER ID   IMAGE          COMMAND                   CREATED         STATUS         PORTS                  NAMES
+544bba0bffd7   httpd:latest   "httpd-foreground"        7 minutes ago   Up 7 minutes   0.0.0.0:8081->80/tcp   web_a
+caeda84388b9   nginx:latest   "/docker-entrypoint.…"   9 minutes ago   Up 9 minutes   0.0.0.0:8080->80/tcp   web
+
+┝ os_container <main> (26-03-15 1:39:19)
+% docker network ls          
+NETWORK ID     NAME      DRIVER    SCOPE
+72ae0869e5f6   bridge    bridge    local
+e31c3cc24cea   host      host      local
+5eb2c1fd3a29   net_a     bridge    local
+19f1aefb3f42   net_b     bridge    local
+bd10d3230248   none      null      local
+
+┝ os_container <main> (26-03-15 1:39:24)
+% 
+
+┝ os_container <main> (26-03-15 1:41:03)
+% docker ps        
+CONTAINER ID   IMAGE          COMMAND                   CREATED          STATUS          PORTS                  NAMES
+544bba0bffd7   httpd:latest   "httpd-foreground"        10 minutes ago   Up 10 minutes   0.0.0.0:8081->80/tcp   web_a
+caeda84388b9   nginx:latest   "/docker-entrypoint.…"   11 minutes ago   Up 11 minutes   0.0.0.0:8080->80/tcp   web
+
+┝ os_container <main> (26-03-15 1:41:33)
+% docker rm web_a                                        
+Error response from daemon: cannot remove container "/web_a": container is running: stop the container before removing or force remove
+
+┝ os_container <main> (26-03-15 1:41:53)
+% docker stop web_a
+web_a
+
+┝ os_container <main> (26-03-15 1:42:03)
+% docker stop web  
+web
+
+┝ os_container <main> (26-03-15 1:42:07)
+% docker run --rm -d --name web_a --network net_a nginx:latest
+
+f3f9d67551e1517758a7f5b837eefa954c8e6cef0b07b69cfed3543ef4d9d964
+
+┝ os_container <main> (26-03-15 1:42:52)
+% docker run --rm -d --name web_b --network net_b nginx:latest
+
+76c829bcfc8be5667217686b149d4486f2f7c0a0ef2f149b7162503a369672ec
+
+┝ os_container <main> (26-03-15 1:43:00)
+% docker run --rm --network net_a busybox:latest wget -qO- http://web_b
+
+Unable to find image 'busybox:latest' locally
+latest: Pulling from library/busybox
+b85757a5ca1a: Download complete 
+Digest: sha256:b3255e7dfbcd10cb367af0d409747d511aeb66dfac98cf30e97e87e4207dd76f
+Status: Downloaded newer image for busybox:latest
+wget: bad address 'web_b'
+
+┝ os_container <main> (26-03-15 1:44:10)
+% docker run --rm --network net_a busybox:latest wget -qO- http://web_a 
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, nginx is successfully installed and working.
+Further configuration is required for the web server, reverse proxy, 
+API gateway, load balancer, content cache, or other features.</p>
+
+<p>For online documentation and support please refer to
+<a href="https://nginx.org/">nginx.org</a>.<br/>
+To engage with the community please visit
+<a href="https://community.nginx.org/">community.nginx.org</a>.<br/>
+For enterprise grade support, professional services, additional 
+security features and capabilities please refer to
+<a href="https://f5.com/nginx">f5.com/nginx</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+┝ os_container <main> (26-03-15 1:44:15)
+% docker run --rm --network net_a busybox:latest nslookup web_a
+
+Server:         127.0.0.11
+Address:        127.0.0.11:53
+
+Non-authoritative answer:
+
+Non-authoritative answer:
+Name:   web_a
+Address: 172.18.0.2
+
+
+┝ os_container <main> (26-03-15 1:45:43)
+% docker run --rm --network net_a busybox:latest wget -qO- http://172.18.0.2
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, nginx is successfully installed and working.
+Further configuration is required for the web server, reverse proxy, 
+API gateway, load balancer, content cache, or other features.</p>
+
+<p>For online documentation and support please refer to
+<a href="https://nginx.org/">nginx.org</a>.<br/>
+To engage with the community please visit
+<a href="https://community.nginx.org/">community.nginx.org</a>.<br/>
+For enterprise grade support, professional services, additional 
+security features and capabilities please refer to
+<a href="https://f5.com/nginx">f5.com/nginx</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+┝ os_container <main> (26-03-15 1:46:56)
+% script -a os_container/logs/exp_log.txt
+
+script: os_container/logs/exp_log.txt: No such file or directory
+
+┝ os_container <main> (26-03-15 1:55:33)
+% script -a logs/exp_log.txt 
+
+Script started, output file is logs/exp_log.txt
+ls
+
+┝ os_container <main> (26-03-15 1:55:48)
+% ls
+logs
+
+┝ os_container <main> (26-03-15 1:55:48)
+% ls
+logs
+
+┝ os_container <main> (26-03-15 1:55:58)
+% docker run --rm --network net_a busybox:latest wget -qO- http://172.18.0.2
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, nginx is successfully installed and working.
+Further configuration is required for the web server, reverse proxy, 
+API gateway, load balancer, content cache, or other features.</p>
+
+<p>For online documentation and support please refer to
+<a href="https://nginx.org/">nginx.org</a>.<br/>
+To engage with the community please visit
+<a href="https://community.nginx.org/">community.nginx.org</a>.<br/>
+For enterprise grade support, professional services, additional 
+security features and capabilities please refer to
+<a href="https://f5.com/nginx">f5.com/nginx</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+┝ os_container <main> (26-03-15 1:56:16)
+% exit
+
+Script done, output file is logs/exp_log.txt
+
+┝ os_container <main> (26-03-15 1:57:45)
+% script -a logs/exp_log.txt
+
+Script started, output file is logs/exp_log.txt
+
+┝ os_container <main> (26-03-15 2:06:03)
+% ls                        
+logs
+
+┝ os_container <main> (26-03-15 2:06:07)
+% cd ..                     
+
+┝ miniterm_jobscheduler_compiler_os_container <main> (26-03-15 2:06:09)
+% ls
+automata        job_scheduler   mini_term       parallel_pg
+compiler        logs            os_container
+
+┝ miniterm_jobscheduler_compiler_os_container <main> (26-03-15 2:06:10)
+% cd os_container 
+
+┝ os_container <main> (26-03-15 2:06:12)
+% ls
+logs
+
+┝ os_container <main> (26-03-15 2:06:13)
+% ls
+logs
+
+┝ os_container <main> (26-03-15 2:06:44)
+% col -bx < logs/exp_log.txt > logs/exp_log.clean.txt 
+
+
+┝ os_container <main> (26-03-15 2:07:10)
+% eixt
+zsh: command not found: eixt
+
+┝ os_container <main> (26-03-15 2:08:18)
+% exit
+
+Script done, output file is logs/exp_log.txt
