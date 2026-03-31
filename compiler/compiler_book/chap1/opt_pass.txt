@@ -1,0 +1,172 @@
+ bash run.sh opt -passes='default<O2>' -debug-pass-manager vars_noopt.ll -disable-output
+Running pass: Annotation2MetadataPass on [module]
+Running pass: ForceFunctionAttrsPass on [module]
+Running pass: InferFunctionAttrsPass on [module]
+Running analysis: InnerAnalysisManagerProxy<FunctionAnalysisManager, Module> on [module]
+Running pass: CoroEarlyPass on [module]
+Running pass: LowerExpectIntrinsicPass on main (13 instructions)
+Running pass: SimplifyCFGPass on main (13 instructions)
+Running analysis: TargetIRAnalysis on main
+Running analysis: AssumptionAnalysis on main
+Running pass: SROAPass on main (13 instructions)
+Running analysis: DominatorTreeAnalysis on main
+Running pass: EarlyCSEPass on main (2 instructions)
+Running analysis: TargetLibraryAnalysis on main
+Invalidating analysis: DominatorTreeAnalysis on main
+Running pass: OpenMPOptPass on [module]
+Running pass: IPSCCPPass on [module]
+Running analysis: DominatorTreeAnalysis on main
+Running pass: CalledValuePropagationPass on [module]
+Running pass: GlobalOptPass on [module]
+Running pass: PromotePass on main (1 instruction)
+Running pass: InstCombinePass on main (1 instruction)
+Running analysis: OptimizationRemarkEmitterAnalysis on main
+Running analysis: AAManager on main
+Running analysis: BasicAA on main
+Running analysis: ScopedNoAliasAA on main
+Running analysis: TypeBasedAA on main
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on main
+Running pass: SimplifyCFGPass on main (1 instruction)
+Invalidating analysis: DominatorTreeAnalysis on main
+Invalidating analysis: BasicAA on main
+Invalidating analysis: AAManager on main
+Running pass: AlwaysInlinerPass on [module]
+Running analysis: ProfileSummaryAnalysis on [module]
+Running pass: ModuleInlinerWrapperPass on [module]
+Running analysis: InlineAdvisorAnalysis on [module]
+Running pass: RequireAnalysisPass<llvm::GlobalsAA, llvm::Module, llvm::AnalysisManager<Module>> on [module]
+Running analysis: GlobalsAA on [module]
+Running analysis: CallGraphAnalysis on [module]
+Running pass: InvalidateAnalysisPass<llvm::AAManager> on main (1 instruction)
+Running pass: RequireAnalysisPass<llvm::ProfileSummaryAnalysis, llvm::Module, llvm::AnalysisManager<Module>> on [module]
+Running analysis: InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module> on [module]
+Running analysis: LazyCallGraphAnalysis on [module]
+Running analysis: FunctionAnalysisManagerCGSCCProxy on (main)
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &> on (main)
+Running pass: DevirtSCCRepeatedPass on (main) (1 node)
+Running pass: InlinerPass on (main) (1 node)
+Running pass: PostOrderFunctionAttrsPass on (main) (1 node)
+Running pass: OpenMPOptCGSCCPass on (main) (1 node)
+Running pass: SROAPass on main (1 instruction)
+Running analysis: DominatorTreeAnalysis on main
+Running pass: EarlyCSEPass on main (1 instruction)
+Running analysis: MemorySSAAnalysis on main
+Running analysis: AAManager on main
+Running analysis: BasicAA on main
+Running pass: SpeculativeExecutionPass on main (1 instruction)
+Running pass: JumpThreadingPass on main (1 instruction)
+Running analysis: LazyValueAnalysis on main
+Running pass: CorrelatedValuePropagationPass on main (1 instruction)
+Invalidating analysis: LazyValueAnalysis on main
+Running pass: SimplifyCFGPass on main (1 instruction)
+Running pass: InstCombinePass on main (1 instruction)
+Running pass: AggressiveInstCombinePass on main (1 instruction)
+Running pass: LibCallsShrinkWrapPass on main (1 instruction)
+Running pass: TailCallElimPass on main (1 instruction)
+Running pass: SimplifyCFGPass on main (1 instruction)
+Running pass: ReassociatePass on main (1 instruction)
+Running pass: ConstraintEliminationPass on main (1 instruction)
+Running analysis: LoopAnalysis on main
+Running analysis: ScalarEvolutionAnalysis on main
+Running pass: LoopSimplifyPass on main (1 instruction)
+Running pass: LCSSAPass on main (1 instruction)
+Running pass: SimplifyCFGPass on main (1 instruction)
+Running pass: InstCombinePass on main (1 instruction)
+Running pass: LoopSimplifyPass on main (1 instruction)
+Running pass: LCSSAPass on main (1 instruction)
+Running pass: SROAPass on main (1 instruction)
+Running pass: VectorCombinePass on main (1 instruction)
+Running pass: MergedLoadStoreMotionPass on main (1 instruction)
+Running pass: GVNPass on main (1 instruction)
+Running analysis: MemoryDependenceAnalysis on main
+Running pass: SCCPPass on main (1 instruction)
+Running pass: BDCEPass on main (1 instruction)
+Running analysis: DemandedBitsAnalysis on main
+Running pass: InstCombinePass on main (1 instruction)
+Running pass: JumpThreadingPass on main (1 instruction)
+Running analysis: LazyValueAnalysis on main
+Running pass: CorrelatedValuePropagationPass on main (1 instruction)
+Invalidating analysis: LazyValueAnalysis on main
+Running pass: ADCEPass on main (1 instruction)
+Running analysis: PostDominatorTreeAnalysis on main
+Running pass: MemCpyOptPass on main (1 instruction)
+Running pass: DSEPass on main (1 instruction)
+Running pass: MoveAutoInitPass on main (1 instruction)
+Running pass: LoopSimplifyPass on main (1 instruction)
+Running pass: LCSSAPass on main (1 instruction)
+Running pass: CoroElidePass on main (1 instruction)
+Running pass: SimplifyCFGPass on main (1 instruction)
+Running pass: InstCombinePass on main (1 instruction)
+Invalidating analysis: DominatorTreeAnalysis on main
+Invalidating analysis: BasicAA on main
+Invalidating analysis: AAManager on main
+Invalidating analysis: MemorySSAAnalysis on main
+Invalidating analysis: LoopAnalysis on main
+Invalidating analysis: ScalarEvolutionAnalysis on main
+Invalidating analysis: MemoryDependenceAnalysis on main
+Invalidating analysis: DemandedBitsAnalysis on main
+Invalidating analysis: PostDominatorTreeAnalysis on main
+Running pass: PostOrderFunctionAttrsPass on (main) (1 node)
+Running analysis: AAManager on main
+Running analysis: BasicAA on main
+Running analysis: DominatorTreeAnalysis on main
+Running pass: RequireAnalysisPass<llvm::ShouldNotRunFunctionPassesAnalysis, llvm::Function, llvm::AnalysisManager<Function>> on main (1 instruction)
+Running analysis: ShouldNotRunFunctionPassesAnalysis on main
+Running pass: CoroSplitPass on (main) (1 node)
+Invalidating analysis: CallGraphAnalysis on [module]
+Running pass: InvalidateAnalysisPass<llvm::ShouldNotRunFunctionPassesAnalysis> on main (1 instruction)
+Invalidating analysis: ShouldNotRunFunctionPassesAnalysis on main
+Invalidating analysis: InlineAdvisorAnalysis on [module]
+Running pass: DeadArgumentEliminationPass on [module]
+Running pass: CoroCleanupPass on [module]
+Running pass: GlobalOptPass on [module]
+Running pass: GlobalDCEPass on [module]
+Running pass: EliminateAvailableExternallyPass on [module]
+Running pass: ReversePostOrderFunctionAttrsPass on [module]
+Running pass: RecomputeGlobalsAAPass on [module]
+Running analysis: CallGraphAnalysis on [module]
+Running pass: Float2IntPass on main (1 instruction)
+Running pass: LowerConstantIntrinsicsPass on main (1 instruction)
+Running pass: LoopSimplifyPass on main (1 instruction)
+Running analysis: LoopAnalysis on main
+Running pass: LCSSAPass on main (1 instruction)
+Running pass: LoopDistributePass on main (1 instruction)
+Running analysis: ScalarEvolutionAnalysis on main
+Running analysis: LoopAccessAnalysis on main
+Running pass: InjectTLIMappings on main (1 instruction)
+Running pass: LoopVectorizePass on main (1 instruction)
+Running pass: InferAlignmentPass on main (1 instruction)
+Running pass: LoopLoadEliminationPass on main (1 instruction)
+Running pass: InstCombinePass on main (1 instruction)
+Running pass: SimplifyCFGPass on main (1 instruction)
+Running pass: SLPVectorizerPass on main (1 instruction)
+Running analysis: DemandedBitsAnalysis on main
+Running pass: VectorCombinePass on main (1 instruction)
+Running pass: InstCombinePass on main (1 instruction)
+Running pass: LoopUnrollPass on main (1 instruction)
+Running pass: WarnMissedTransformationsPass on main (1 instruction)
+Running pass: SROAPass on main (1 instruction)
+Running pass: InferAlignmentPass on main (1 instruction)
+Running pass: InstCombinePass on main (1 instruction)
+Running pass: LoopSimplifyPass on main (1 instruction)
+Running pass: LCSSAPass on main (1 instruction)
+Running pass: AlignmentFromAssumptionsPass on main (1 instruction)
+Running pass: LoopSinkPass on main (1 instruction)
+Running pass: InstSimplifyPass on main (1 instruction)
+Running pass: DivRemPairsPass on main (1 instruction)
+Running pass: TailCallElimPass on main (1 instruction)
+Running pass: SimplifyCFGPass on main (1 instruction)
+Invalidating analysis: DominatorTreeAnalysis on main
+Invalidating analysis: BasicAA on main
+Invalidating analysis: AAManager on main
+Invalidating analysis: LoopAnalysis on main
+Invalidating analysis: ScalarEvolutionAnalysis on main
+Invalidating analysis: LoopAccessAnalysis on main
+Invalidating analysis: DemandedBitsAnalysis on main
+Running pass: GlobalDCEPass on [module]
+Running pass: ConstantMergePass on [module]
+Running pass: CGProfilePass on [module]
+Running pass: RelLookupTableConverterPass on [module]
+Running pass: AnnotationRemarksPass on main (1 instruction)
+Running pass: VerifierPass on [module]
+Running analysis: VerifierAnalysis on [module]
