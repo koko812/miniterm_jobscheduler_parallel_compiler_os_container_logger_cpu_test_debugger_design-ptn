@@ -102,7 +102,7 @@ Token *tokenize(char *p){
             continue;
         }
 
-        error("トークナイズできません．");
+        error_at(p, "トークナイズできません．");
     }
 
     new_token(TK_EOF, cur, p);
@@ -116,8 +116,8 @@ int main(int argc, char **argv){
         return 1;
     }
 
-    token = tokenize(argv[1]);
     user_input = argv[1];
+    token = tokenize(argv[1]);
 
     printf(".intel_syntax noprefix\n");
     printf(".globl main\n");
