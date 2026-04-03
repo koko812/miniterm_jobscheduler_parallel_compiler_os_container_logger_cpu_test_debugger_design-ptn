@@ -23,7 +23,7 @@ struct Token{
 
 
 typedef enum{
-    ND_EQL,
+    ND_EQ,
     ND_NEQ,
     ND_LE,
     ND_LT,
@@ -233,7 +233,7 @@ Node *equality(){
     Node *node = relational();
     for(;;){
         if(consume("=="))
-            node = new_node(ND_EQL, node, relational());
+            node = new_node(ND_EQ, node, relational());
         else if(consume("!="))
             node = new_node(ND_NEQ, node, relational());
         else{
@@ -283,7 +283,7 @@ void gen(Node *node){
             printf("  setle al\n");
             printf("  movzb rax, al\n");
             break;
-        case ND_EQL:
+        case ND_EQ:
             printf("  cmp rax, rdi\n");
             printf("  sete al\n");
             printf("  movzb rax, al\n");
