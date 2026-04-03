@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+
 typedef enum{
     TK_RESERVED,
     TK_NUM,
@@ -20,12 +22,9 @@ struct Token{
     char *str;
 };
 
-
 typedef enum{
     ND_ADD,
     ND_SUB,
-    ND_MUL,
-    ND_DIV,
     ND_NUM,
 } NodeKind;
 
@@ -109,7 +108,7 @@ Token *tokenize(char *p){
             continue;
         }
 
-        if(*p=='+' || *p=='-' || *p=='*' || *p=='/' ){
+        if(*p=='+' || *p=='-'){
             cur = new_token(TK_RESERVED, cur, p++);
             continue;
         }
@@ -147,28 +146,14 @@ Node *num(){
     return new_node_num(expect_number());
 }
 
-Node *mul(){
-    Node *node = num();
-    for(;;){
-        if(consume('*'))
-            node = new_node(ND_MUL, node, num());
-        else if(consume('/'))
-        // 割り算の命令はわからんっす？？
-            node = new_node(ND_DIV, node, num());
-        else{
-            return node;
-        }
-    }
-}
-
 Node *expr(){
-    Node *node = mul();
+    Node *node = num();
 
     for(;;){
         if(consume('+'))
-            node = new_node(ND_ADD, node, mul());
+            node = new_node(ND_ADD, node, num());
         else if(consume('-'))
-            node = new_node(ND_SUB, node, mul());
+            node = new_node(ND_SUB, node, num());
         else{
             return node;
         }
@@ -194,13 +179,6 @@ void gen(Node *node){
             break;
         case ND_SUB:
             printf("  sub rax, rdi\n");
-            break;
-        case ND_MUL:
-            printf("  imul rax, rdi\n");
-            break;
-        case ND_DIV:
-            printf("  cqo\n");
-            printf("  idiv rdi\n");
             break;
     }
 

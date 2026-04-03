@@ -1,23 +1,29 @@
 .intel_syntax noprefix
 .globl main
 main:
-  push 123
-  push 23
-  pop rdi
-  pop rax
-  sub rax, rdi
-  push rax
+  push 2
+  push 3
   push 4
   pop rdi
   pop rax
-  add rax, rdi
+  imul rax, rdi
   push rax
-  push 45
   pop rdi
   pop rax
   add rax, rdi
   push rax
-  push 56
+  push 8
+  push 2
+  pop rdi
+  pop rax
+  cqo
+  idiv rdi
+  push rax
+  pop rdi
+  pop rax
+  add rax, rdi
+  push rax
+  push 2
   pop rdi
   pop rax
   sub rax, rdi
