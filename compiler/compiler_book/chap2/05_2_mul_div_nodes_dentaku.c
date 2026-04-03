@@ -109,7 +109,7 @@ Token *tokenize(char *p){
             continue;
         }
 
-        if(*p=='+' || *p=='-' || *p=='*' || *p=='/' || *p=='(' || *p==')'){
+        if(*p=='+' || *p=='-' || *p=='*' || *p=='/' ){
             cur = new_token(TK_RESERVED, cur, p++);
             continue;
         }
@@ -143,36 +143,18 @@ Node *new_node_num(int val){
     return node;
 }
 
-
-Node *expr();
-
-Node *primary(){
-    if(consume('(')){
-        Node *node = expr();
-        expect(')');
-        return node;
-    }
+Node *num(){
     return new_node_num(expect_number());
 }
 
-Node *unary(){
-    if (consume('+'))
-        return primary();
-    if (consume('-'))
-        return new_node(ND_SUB, new_node_num(0), primary());
-
-    return primary();
-}
-
 Node *mul(){
-    Node *node = unary();
-
+    Node *node = num();
     for(;;){
         if(consume('*'))
-            node = new_node(ND_MUL, node, unary());
+            node = new_node(ND_MUL, node, num());
         else if(consume('/'))
         // 割り算の命令はわからんっす？？
-            node = new_node(ND_DIV, node, unary());
+            node = new_node(ND_DIV, node, num());
         else{
             return node;
         }
@@ -181,6 +163,7 @@ Node *mul(){
 
 Node *expr(){
     Node *node = mul();
+
     for(;;){
         if(consume('+'))
             node = new_node(ND_ADD, node, mul());
