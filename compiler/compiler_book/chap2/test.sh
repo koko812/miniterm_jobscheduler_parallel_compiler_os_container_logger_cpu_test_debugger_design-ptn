@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+# set -x
 assert(){
     expected="$1"
     input="$2"
@@ -39,5 +39,10 @@ assert 0 "3<2"
 assert 1 "3>2"
 assert 1 "3>=3"
 assert 0 "3>3"
+assert 0 "3==2"
+assert 1 "3==3"
+assert 1 "( 3 + 2 ) * 4 == 2 * 10"
+assert 0 "( 3 + 2 ) * 4 != 2 * 10"
+assert 1 "( 3 + 2 ) * 3 != 2 * 10"
 
 echo OK
