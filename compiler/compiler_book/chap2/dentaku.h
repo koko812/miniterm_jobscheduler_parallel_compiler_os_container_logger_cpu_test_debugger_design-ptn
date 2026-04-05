@@ -7,6 +7,7 @@
 typedef enum{
     TK_RESERVED,
     TK_IDENT,
+    TK_RETURN,
     TK_NUM,
     TK_EOF,
 } TokenKind;
@@ -34,6 +35,7 @@ typedef enum{
     ND_MUL,
     ND_DIV,
     ND_ASSIGN,
+    ND_RETURN,
     ND_LVAR,
     ND_NUM,
 } NodeKind;
@@ -65,6 +67,8 @@ void error(char *fmt, ...);
 
 bool consume(char *op);
 Token *consume_ident();
+bool consume_kw(TokenKind kind);
+
 void expect(char *op);
 int expect_number();
 bool at_eof();

@@ -48,5 +48,9 @@ assert 3 "a=1;b=2;a+b;"
 assert 3 "abc=1;bcd=2;abc+bcd;"
 assert 5 "x=1; y=(x+1)*2; y+1;"
 assert 7 "x=1; y=(x+1)*2+1; div=5; z=y/div; z+y+1;"
+assert 5 "return 5;"
+assert 5 "returnx=5; return returnx;"
+assert 7 "x=2;y=3;return x+x+y; x=x+2; return x;"
+
 
 echo OK
