@@ -1,47 +1,10 @@
+#include "dentaku.h"
+#include <stdio.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-typedef enum{
-    TK_RESERVED,
-    TK_NUM,
-    TK_EOF,
-} TokenKind;
-
-typedef struct Token Token;
-
-struct Token{
-    TokenKind kind;
-    Token *next;
-    int val;
-    char *str;
-    int len;
-};
-
-
-typedef enum{
-    ND_EQL,
-    ND_NEQ,
-    ND_LE,
-    ND_LT,
-    ND_ADD,
-    ND_SUB,
-    ND_MUL,
-    ND_DIV,
-    ND_NUM,
-} NodeKind;
-
-typedef struct Node Node;
-
-struct Node{
-    NodeKind kind;
-    Node *lhs;
-    Node *rhs;
-    int val;
-};
 
 Token *token;
 char *user_input;
@@ -98,6 +61,7 @@ bool at_eof(){
 }
 
 
+
 Token *new_token(TokenKind kind, Token *cur, int len, char *str){
     Token *tok = calloc(1, sizeof(Token));
 
@@ -117,6 +81,10 @@ Token *tokenize(char *p){
         if(isspace(*p)){
             p++;
             continue;
+        }
+
+        if ('a' <= *p && *p <= 'z'){
+            cur = new_token(TK_IDENT, cur, 1, p++);
         }
 
         if (!strncmp(p, "==", 2) ||
@@ -163,8 +131,8 @@ Node *new_node_num(int val){
     return node;
 }
 
+Node *node[100];
 
-Node *expr();
 
 Node *primary(){
     if(consume("(")){
@@ -191,7 +159,6 @@ Node *mul(){
         if(consume("*"))
             node = new_node(ND_MUL, node, unary());
         else if(consume("/"))
-        // 割り算の命令はわからんっす？？
             node = new_node(ND_DIV, node, unary());
         else{
             return node;
@@ -233,7 +200,7 @@ Node *equality(){
     Node *node = relational();
     for(;;){
         if(consume("=="))
-            node = new_node(ND_EQL, node, relational());
+            node = new_node(ND_EQ, node, relational());
         else if(consume("!="))
             node = new_node(ND_NEQ, node, relational());
         else{
@@ -242,82 +209,20 @@ Node *equality(){
     }
 }
 
-Node *expr(){
+Node *assign(){
     Node *node = equality();
+    if(consume("=")){
+        node = new_node(ND_ASSIGN, node, assign());
+    }
     return node;
 }
 
-void gen(Node *node){
-    if(node->kind==ND_NUM){
-        printf("  push %d\n", node->val);
-        return;
-    }
 
-    gen(node->lhs);
-    gen(node->rhs);
-
-    printf("  pop rdi\n");
-    printf("  pop rax\n");
-
-    switch(node->kind){
-        case ND_ADD:
-            printf("  add rax, rdi\n");
-            break;
-        case ND_SUB:
-            printf("  sub rax, rdi\n");
-            break;
-        case ND_MUL:
-            printf("  imul rax, rdi\n");
-            break;
-        case ND_DIV:
-            printf("  cqo\n");
-            printf("  idiv rdi\n");
-            break;
-        case ND_LT:
-            printf("  cmp rax, rdi\n");
-            printf("  setl al\n");
-            printf("  movzb rax, al\n");
-            break;
-        case ND_LE:
-            printf("  cmp rax, rdi\n");
-            printf("  setle al\n");
-            printf("  movzb rax, al\n");
-            break;
-        case ND_EQL:
-            printf("  cmp rax, rdi\n");
-            printf("  sete al\n");
-            printf("  movzb rax, al\n");
-            break;
-        case ND_NEQ:
-            printf("  cmp rax, rdi\n");
-            printf("  setne al\n");
-            printf("  movzb rax, al\n");
-            break;
-    }
-
-    printf("  push rax\n");
+Node *expr(){
+    Node *node = assign();
+    return node;
 }
 
-
-int main(int argc, char **argv){
-    if (argc != 2){
-        fprintf(stderr, "引数の数が正しくありません");
-        return 1;
-    }
-
-    user_input = argv[1];
-    token = tokenize(user_input);
+Node *stmt(){
     Node *node = expr();
-
-    printf(".intel_syntax noprefix\n");
-    printf(".globl main\n");
-    printf("main:\n");
-
-    gen(node);
-
-    printf("  pop rax\n");
-    printf("  ret\n\n");
-    printf(".section .note.GNU-stack,\"\",@progbits\n");
-
-    return 0;
 }
