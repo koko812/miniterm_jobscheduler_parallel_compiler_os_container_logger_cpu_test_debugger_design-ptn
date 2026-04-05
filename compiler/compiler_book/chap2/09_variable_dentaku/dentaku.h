@@ -43,6 +43,7 @@ struct Node{
     Node *lhs;
     Node *rhs;
     int val;
+    int offset;
 };
 
 extern Token *token;
@@ -52,13 +53,14 @@ void error_at(char *loc, char *fmt, ...);
 void error(char *fmt, ...);
 
 bool consume(char *op);
+Token *consume_ident();
 void expect(char *op);
 int expect_number();
 bool at_eof();
 
 
 Token *new_token(TokenKind kind, Token *cur, int len, char *str);
-Token *tokenize(char *p);
+Token *tokenize();
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
 Node *new_node_num(int val);
 
@@ -70,6 +72,8 @@ Node *add();
 Node *relational();
 Node *equality();
 
+extern Node *code[100];
+void program();
 void gen(Node *node);
 
 #endif
