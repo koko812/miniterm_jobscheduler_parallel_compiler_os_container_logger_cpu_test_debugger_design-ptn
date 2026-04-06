@@ -39,45 +39,6 @@ void gen(Node *node){
             gen(node->then);
             printf(".Lend%d:\n", seq);
         }
-        printf("  push 0\n");
-        return;
-    }
-
-    if(node->kind==ND_WHILE){
-        int seq = labelseq++;
-        printf(".Lbegin%d:\n", seq);
-        gen(node->cond);
-        printf("  pop rax\n");
-        printf("  cmp rax, 0\n");
-        printf("  je  .Lend%d\n", seq);
-        gen(node->then);
-        printf("  jmp  .Lbegin%d\n", seq);
-        printf(".Lend%d:\n", seq);
-        printf("  push 0\n");
-        return;
-    }
-
-    if(node->kind==ND_FOR){
-        int seq = labelseq++;
-        if(node->init){
-            gen(node->init);
-            printf("  pop rax\n");
-        }
-        printf(".Lbegin%d:\n", seq);
-        if(node->cond){
-            gen(node->cond);
-            printf("  pop rax\n");
-            printf("  cmp rax, 0\n");
-            printf("  je  .Lend%d\n", seq);
-        }
-        gen(node->then);
-        if(node->inc){
-            gen(node->inc);
-            printf("  pop rax\n");
-        }
-        printf("  jmp  .Lbegin%d\n", seq);
-        printf(".Lend%d:\n", seq);
-        printf("  push 0\n");
         return;
     }
 

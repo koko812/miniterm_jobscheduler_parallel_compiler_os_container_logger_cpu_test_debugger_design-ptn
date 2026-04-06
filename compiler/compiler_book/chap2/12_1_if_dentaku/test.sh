@@ -54,7 +54,6 @@ assert 7 "x=2;y=3;return x+x+y; x=x+2; return x;"
 assert 1 "if (1) return 1; else return 2;"
 assert 2 "if (0) return 1; else return 2;"
 assert 4 "a=3; b=7; if (a==b) return 0; if (a<b) return b-a; else return a-b;"
-assert 139 "a=1;b=2;c=3;d=4;e=5; while(a<100) a=b+c+d+e; return a;"
-assert 10 "for(i=1; i<10; i=i+1) i+2; return i;"
+
 
 echo OK

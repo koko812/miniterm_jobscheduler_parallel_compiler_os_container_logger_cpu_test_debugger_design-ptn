@@ -108,18 +108,6 @@ Token *tokenize(){
             continue;
         }
 
-        if(strncmp(p, "while", 5) == 0 && !is_alnum(p[5])){
-            cur = new_token(TK_WHILE, cur, 5, p);
-            p+=5;
-            continue;
-        }
-
-        if(strncmp(p, "for", 3) == 0 && !is_alnum(p[3])){
-            cur = new_token(TK_FOR, cur, 3, p);
-            p+=3;
-            continue;
-        }
-
         if(strncmp(p, "if", 2) == 0 && !is_alnum(p[2])){
             cur = new_token(TK_IF, cur, 2, p);
             p+=2;
@@ -325,38 +313,6 @@ Node *stmt(){
         node->then = stmt();
         if (consume_kw(TK_ELSE))
             node->els = stmt();
-        return node;
-    }
-
-    if(consume_kw(TK_WHILE)){
-        node = calloc(1, sizeof(Node));
-        node->kind = ND_WHILE;
-        expect("(");
-        node->cond = expr();
-        expect(")");
-        node->then = stmt();
-        return node;
-    }
-
-    if(consume_kw(TK_FOR)){
-        node = calloc(1, sizeof(Node));
-        node->kind = ND_FOR;
-        expect("(");
-
-        if(!consume(";")){
-            node->init = expr();
-            expect(";");
-        }
-        if(!consume(";")){
-            node->cond = expr();
-            expect(";");
-        }
-        if(!consume(")")){
-            node->inc = expr();
-            expect(")");
-        }
-
-        node->then = stmt();
         return node;
     }
 
