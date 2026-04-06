@@ -13,6 +13,15 @@ void gen_lval(Node *node){
 }
 
 void gen(Node *node){
+    if(node->kind==ND_BLOCK){
+        for(Node *n = node->body; n; n=n->next){
+            gen(n);
+            printf("  pop rax\n");
+        }
+        printf("  push 0\n");
+        return;
+    }
+
     if(node->kind==ND_RETURN){
         gen(node->lhs);
         printf("  pop rax\n");

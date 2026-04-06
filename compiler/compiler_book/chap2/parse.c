@@ -158,7 +158,7 @@ Token *tokenize(){
                 continue;
             }
 
-        if (strchr("+-*/()<>=;", *p)){
+        if (strchr("+-*/()<>=;{}", *p)){
             cur = new_token(TK_RESERVED, cur, 1, p++);
             continue;
         }
@@ -307,6 +307,25 @@ Node *expr(){
 
 Node *stmt(){
     Node *node;
+
+    if(consume("{")){
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_BLOCK;
+        Node *head = NULL;
+        Node *cur = NULL;
+        while(!consume("}")){
+            Node *stmt_node = stmt();
+            if(!head){
+                head = stmt_node;
+            }else{
+                cur->next = stmt_node;
+            }
+            cur = stmt_node;
+        }
+
+        node->body = head;
+        return node;
+    }
 
     if(consume_kw(TK_RETURN)){
         node = calloc(1, sizeof(Node));
