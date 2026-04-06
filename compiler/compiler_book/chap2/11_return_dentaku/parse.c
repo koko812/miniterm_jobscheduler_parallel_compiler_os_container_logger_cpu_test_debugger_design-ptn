@@ -108,28 +108,15 @@ Token *tokenize(){
             continue;
         }
 
-        if(strncmp(p, "if", 2) == 0 && !is_alnum(p[2])){
-            cur = new_token(TK_IF, cur, 2, p);
-            p+=2;
-            continue;
-        }
-
-        if(strncmp(p, "else", 4) == 0 && !is_alnum(p[4])){
-            cur = new_token(TK_ELSE, cur, 4, p);
-            p+=4;
-            continue;
-        }
-
         if(strncmp(p, "return", 6) == 0 && !is_alnum(p[6])){
             cur = new_token(TK_RETURN, cur, 6, p);
             p+=6;
             continue;
         }
 
-        if (isalpha(*p) || *p == '_'){
+        if ('a' <= *p && *p <= 'z'){
             char *start = p;
-            p++;
-            while (is_alnum(*p) || *p == '_'){
+            while ('a' <= *p && *p <= 'z'){
                 p++;
             }
             int len = p - start;
@@ -300,23 +287,10 @@ Node *stmt(){
         node = calloc(1, sizeof(Node));
         node->kind = ND_RETURN;
         node->lhs = expr();
-        expect(";");
-        return node;
+    }else{
+        node = expr();
     }
 
-    if(consume_kw(TK_IF)){
-        node = calloc(1, sizeof(Node));
-        node->kind = ND_IF;
-        expect("(");
-        node->cond = expr();
-        expect(")");
-        node->then = stmt();
-        if (consume_kw(TK_ELSE))
-            node->els = stmt();
-        return node;
-    }
-
-    node = expr();
     expect(";");
     return node;
 }

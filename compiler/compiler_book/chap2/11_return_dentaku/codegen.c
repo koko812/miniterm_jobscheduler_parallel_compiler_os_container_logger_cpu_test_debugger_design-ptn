@@ -1,8 +1,6 @@
 #include "dentaku.h"
 #include <stdio.h>
 
-static int labelseq = 0;
-
 void gen_lval(Node *node){
     if(node->kind != ND_LVAR){
         error("代入の左辺値が変数ではありません．");
@@ -19,26 +17,6 @@ void gen(Node *node){
         printf("  mov rsp, rbp\n");
         printf("  pop rbp\n");
         printf("  ret\n");
-        return;
-    }
-
-    if(node->kind==ND_IF){
-        int seq = labelseq++;
-        gen(node->cond);
-        printf("  pop rax\n");
-        printf("  cmp rax, 0\n");
-        if(node->els){
-            printf("  je  .Lelse%d\n", seq);
-            gen(node->then);
-            printf("  jmp  .Lend%d\n", seq);
-            printf(".Lelse%d:\n", seq);
-            gen(node->els);
-            printf(".Lend%d:\n", seq);
-        }else{
-            printf("  je  .Lend%d\n", seq);
-            gen(node->then);
-            printf(".Lend%d:\n", seq);
-        }
         return;
     }
 

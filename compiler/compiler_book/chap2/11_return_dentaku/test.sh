@@ -51,9 +51,6 @@ assert 7 "x=1; y=(x+1)*2+1; div=5; z=y/div; z+y+1;"
 assert 5 "return 5;"
 assert 5 "returnx=5; return returnx;"
 assert 7 "x=2;y=3;return x+x+y; x=x+2; return x;"
-assert 1 "if (1) return 1; else return 2;"
-assert 2 "if (0) return 1; else return 2;"
-assert 4 "a=3; b=7; if (a==b) return 0; if (a<b) return b-a; else return a-b;"
 
 
 echo OK
