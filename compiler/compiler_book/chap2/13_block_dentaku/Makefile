@@ -7,10 +7,7 @@ dentaku: $(OBJS)
 
 $(OBJS): dentaku.h
 
-ext.o: ext.c
-	$(CC) -c ext.c -o ext.o
-
-test: dentaku ext.o
+test: dentaku
 	bash test.sh
 
 clean:

@@ -158,7 +158,7 @@ Token *tokenize(){
                 continue;
             }
 
-        if (strchr("+-*/()<>=;{},", *p)){
+        if (strchr("+-*/()<>=;{}", *p)){
             cur = new_token(TK_RESERVED, cur, 1, p++);
             continue;
         }
@@ -202,46 +202,22 @@ Node *primary(){
         return node;
     }
 
-
     Token *tok = consume_ident();
     if(tok){
         Node *node = calloc(1, sizeof(Node));
-        if(consume("(")){
-            node->kind = ND_FUNCALL;
-            node->funcname = tok->str;
-            node->funcname_len = tok->len;
-            Node *head = NULL;
-            Node *cur = NULL;
+        node->kind = ND_LVAR;
 
-            if(!consume(")")){
-                for (;;){
-                    Node *expr_node = expr();
-                    if(!head) head = expr_node;
-                    else cur->next = expr_node;
-                    cur = expr_node;
-
-                    if (consume(")")) break;
-                    expect(",");
-                }
-            }
-
-            node->args = head;
-            return node;
-
+        LVar *lvar = find_lvar(tok);
+        if(lvar){
+            node->offset = lvar->offset;
         }else{
-            node->kind = ND_LVAR;
-            LVar *lvar = find_lvar(tok);
-            if(lvar){
-                node->offset = lvar->offset;
-            }else{
-                lvar = calloc(1, sizeof(LVar));
-                lvar->next = locals;
-                lvar->name = tok->str;
-                lvar->len = tok->len;
-                lvar->offset = locals ? locals->offset + 8 : 8;
-                node->offset = lvar->offset;
-                locals = lvar;
-            }
+            lvar = calloc(1, sizeof(LVar));
+            lvar->next = locals;
+            lvar->name = tok->str;
+            lvar->len = tok->len;
+            lvar->offset = locals ? locals->offset + 8 : 8;
+            node->offset = lvar->offset;
+            locals = lvar;
         }
         return node;
     }

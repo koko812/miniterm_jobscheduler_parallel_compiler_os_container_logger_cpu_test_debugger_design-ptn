@@ -46,7 +46,6 @@ typedef enum{
     ND_LVAR,
     ND_NUM,
     ND_BLOCK,
-    ND_FUNCALL,
 } NodeKind;
 
 typedef struct Node Node;
@@ -62,11 +61,8 @@ struct Node{
     Node *inc;
     Node *next;
     Node *body;
-    Node *args;
     int val;
     int offset;
-    int funcname_len;
-    char *funcname;
 };
 
 typedef struct LVar LVar;

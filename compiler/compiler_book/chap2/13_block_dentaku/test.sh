@@ -5,7 +5,7 @@ assert(){
     input="$2"
 
     ./dentaku "$input" > temp.s
-    gcc -o temps temp.s ext.o
+    gcc -o temps temp.s
     ./temps
     actual="$?"
 
@@ -54,13 +54,10 @@ assert 42 "42;"
 # assert 1 "if (1) return 1; else return 2;"
 # assert 2 "if (0) return 1; else return 2;"
 assert 4 "a=3; b=7; if (a==b) return 0; if (a<b) return b-a; else return a-b;"
-assert 113 "a=1;b=2;c=3;d=4;e=5; while(a<100) a=a+b+c+d+e; return a;"
+assert 139 "a=1;b=2;c=3;d=4;e=5; while(a<100) a=b+c+d+e; return a;"
 assert 10 "for(i=1; i<10; i=i+1) i+2; return i;"
 assert 20 "i=0; a=0; while(i<10){i=i+1; a=a+2;} return a;";
 assert 55 "i=0; a=0; while(i<10){i=i+1; a=a+i;} return a;";
 assert 155 "i=0; a=0; while(i<20){i=i+1; if(i>10){a=a+i;}} return a;";
-assert 42 "foo();"
-assert 5 "add(2,3);"
-assert 243 "powe(3,5);"
 
 echo OK

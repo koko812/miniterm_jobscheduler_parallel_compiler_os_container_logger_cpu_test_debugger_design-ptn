@@ -1,10 +1,7 @@
 #include "dentaku.h"
 #include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
 
 static int labelseq = 0;
-static int stack_depth = 0;
 
 void gen_lval(Node *node){
     if(node->kind != ND_LVAR){
@@ -15,63 +12,21 @@ void gen_lval(Node *node){
     printf("  push rax\n");
 }
 
-void emit_push(const char *reg){
-    printf("  push %s\n", reg);
-    stack_depth++;
-}
-
-void emit_push_imm(int val){
-    printf("  push %d\n", val);
-    stack_depth++;
-}
-
-void emit_pop(const char *reg){
-    printf("  pop %s\n", reg);
-    stack_depth--;
-}
-
 void gen(Node *node){
-
-    if(node->kind==ND_FUNCALL){
-        int call_cnt=0;
-        static char *argreg[] = {"rdi", "rsi", "rdx", "rcx","r8","r9"};
-        for(Node *n = node->args; n; n=n->next){
-            gen(n);
-            call_cnt++;
-            if(call_cnt>=6) break;
-        }
-        for(int i=call_cnt-1; i>=0; i--){
-            emit_pop("rax");
-            printf("  mov %s, rax\n", argreg[i]);
-        }
-        bool need_align = (stack_depth % 2 == 1);
-        if(need_align){
-            printf("  sub rsp, 8\n");
-            stack_depth++;
-        } 
-        printf("  call %.*s\n",node->funcname_len, node->funcname);
-        if(need_align){
-            printf("  add rsp, 8\n");
-            stack_depth--;
-        } 
-        emit_push("rax");
-        return;
-    }
-
     if(node->kind==ND_BLOCK){
         for(Node *n = node->body; n; n=n->next){
             gen(n);
-            emit_pop("rax");
+            printf("  pop rax\n");
         }
-        emit_push("0");
+        printf("  push 0\n");
         return;
     }
 
     if(node->kind==ND_RETURN){
         gen(node->lhs);
-        emit_pop("rax");
+        printf("  pop rax\n");
         printf("  mov rsp, rbp\n");
-        emit_pop("rbp");
+        printf("  pop rbp\n");
         printf("  ret\n");
         return;
     }
@@ -79,7 +34,7 @@ void gen(Node *node){
     if(node->kind==ND_IF){
         int seq = labelseq++;
         gen(node->cond);
-        emit_pop("rax");
+        printf("  pop rax\n");
         printf("  cmp rax, 0\n");
         if(node->els){
             printf("  je  .Lelse%d\n", seq);
@@ -93,7 +48,7 @@ void gen(Node *node){
             gen(node->then);
             printf(".Lend%d:\n", seq);
         }
-        emit_push("0");
+        printf("  push 0\n");
         return;
     }
 
@@ -101,14 +56,13 @@ void gen(Node *node){
         int seq = labelseq++;
         printf(".Lbegin%d:\n", seq);
         gen(node->cond);
-        emit_pop("rax");
+        printf("  pop rax\n");
         printf("  cmp rax, 0\n");
         printf("  je  .Lend%d\n", seq);
         gen(node->then);
-        emit_pop("rax");
         printf("  jmp  .Lbegin%d\n", seq);
         printf(".Lend%d:\n", seq);
-        emit_push("0");
+        printf("  push 0\n");
         return;
     }
 
@@ -116,46 +70,45 @@ void gen(Node *node){
         int seq = labelseq++;
         if(node->init){
             gen(node->init);
-            emit_pop("rax");
+            printf("  pop rax\n");
         }
         printf(".Lbegin%d:\n", seq);
         if(node->cond){
             gen(node->cond);
-            emit_pop("rax");
+            printf("  pop rax\n");
             printf("  cmp rax, 0\n");
             printf("  je  .Lend%d\n", seq);
         }
         gen(node->then);
-        emit_pop("rax");
         if(node->inc){
             gen(node->inc);
-            emit_pop("rax");
+            printf("  pop rax\n");
         }
         printf("  jmp  .Lbegin%d\n", seq);
         printf(".Lend%d:\n", seq);
-        emit_push("0");
+        printf("  push 0\n");
         return;
     }
 
     switch(node->kind){
         case ND_NUM:
-            emit_push_imm(node->val);
+            printf("  push %d\n", node->val);
             return;
 
         case ND_LVAR:
             gen_lval(node);
-            emit_pop("rax");
+            printf("  pop rax\n");
             printf("  mov rax, [rax]\n");
-            emit_push("rax");
+            printf("  push rax\n");
             return;
 
         case ND_ASSIGN:
             gen_lval(node->lhs);
             gen(node->rhs);
-            emit_pop("rdi");
-            emit_pop("rax");
+            printf("  pop rdi\n");
+            printf("  pop rax\n");
             printf("  mov [rax], rdi\n");
-            emit_push("rdi");
+            printf("  push rdi\n");
             return;
     }
 
@@ -163,8 +116,8 @@ void gen(Node *node){
     gen(node->lhs);
     gen(node->rhs);
 
-    emit_pop("rdi");
-    emit_pop("rax");
+    printf("  pop rdi\n");
+    printf("  pop rax\n");
 
     switch(node->kind){
         case ND_ADD:
@@ -202,5 +155,5 @@ void gen(Node *node){
             break;
     }
 
-    emit_push("rax");
+    printf("  push rax\n");
 }
