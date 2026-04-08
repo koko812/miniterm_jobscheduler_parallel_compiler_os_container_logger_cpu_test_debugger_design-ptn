@@ -131,6 +131,13 @@ Token *tokenize(){
             continue;
         }
 
+        if(strncmp(p, "sizeof", 6) == 0 && !is_alnum(p[6])){
+            cur = new_token(TK_INT, cur, 6, p);
+            p+=6;
+            continue;
+        }
+
+
         if(strncmp(p, "int", 3) == 0 && !is_alnum(p[3])){
             cur = new_token(TK_INT, cur, 3, p);
             p+=3;
@@ -271,6 +278,11 @@ Node *primary(){
 }
 
 Node *unary(){
+    if(consume_kw(TK_SIZEOF)){
+        Node *node = unary();
+        add_type(node);
+        return new_node_num(size_of(node->ty));
+    }
     if (consume("+"))
         return primary();
     if (consume("-"))

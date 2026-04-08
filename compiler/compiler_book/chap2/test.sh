@@ -79,6 +79,12 @@ assert 9 "int add1(int *p){ return *p + 1; } int main(){ int a; a=8; return add1
 #assert 1 "int main(){ int a = 0; int *p; p=3; return *p; }"
 #assert 1 "int main(){ int a; a = 0; int *p; p=&a; return p; } "
 assert 30 "int main(){ int *p; p=alloc3(); return *(p+2); }"
+assert 4 "int main(){ int a; return sizeof(a); }"
+assert 8 "int main(){ int *p; return sizeof(p); }"
+assert 4 "int main(){ int *p; return sizeof(*p); }"
+assert 4 "int main(){ return sizeof(1); }"
+assert 4 "int main(){ return sizeof(sizeof(1)); }"
+
 
 
 
