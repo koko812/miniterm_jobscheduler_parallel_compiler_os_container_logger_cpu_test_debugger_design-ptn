@@ -76,5 +76,7 @@ assert 3 "int main(){ int a; int *p; a=3; p=&a; return *p; }"
 assert 5 "int main(){ int a; int *p; a=3; p=&a; *p=5; return a; }"
 assert 7 "int main(){ int a; int *p; int **pp; a=7; p=&a; pp=&p; return **pp; }"
 assert 9 "int add1(int *p){ return *p + 1; } int main(){ int a; a=8; return add1(&a); }"
+assert 1 "int main(){ int *p; return *p; }"
+
 
 echo OK
