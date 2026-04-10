@@ -87,5 +87,7 @@ assert 4 "int main(){ return sizeof(1); }"
 assert 4 "int main(){ return sizeof(sizeof(1)); }"
 assert 3 "int main(){ int a[2]; *a=1; *(a+1)=2; return *a+*(a+1); }"
 assert 3 "int main(){ int a[2]; *a=1; *(a+1)=2; int *p; p=a; return *p+*(p+1); }"
+assert 3 "int main(){ int a[2]; *a=1; *(a+1)=2; return a[0]+a[1]; }"
+
 
 echo OK

@@ -236,6 +236,8 @@ Node *new_node_num(int val){
 
 
 Node *primary(){
+    Node *node;
+
     if(consume("(")){
         Node *node = expr();
         expect(")");
@@ -245,7 +247,7 @@ Node *primary(){
 
     Token *tok = consume_ident();
     if(tok){
-        Node *node = calloc(1, sizeof(Node));
+        node = calloc(1, sizeof(Node));
         if(consume("(")){
             node->kind = ND_FUNCALL;
             node->funcname = tok->str;
@@ -276,6 +278,12 @@ Node *primary(){
             node->ty = lvar->ty;
             return node;
         }
+    }
+
+    while (consume("[")){
+        Node *idx = expr();
+        expect("]");
+        node = new_node(ND_DEREF, new_node(ND_ADD, node, idx), NULL);
     }
 
     return new_node_num(expect_number());
