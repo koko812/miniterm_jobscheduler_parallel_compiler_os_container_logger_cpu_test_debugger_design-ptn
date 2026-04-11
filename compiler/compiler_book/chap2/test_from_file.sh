@@ -17,6 +17,6 @@ assert(){
     fi
 }
 
-assert 8 test1.c
+assert 3 test1.c
 
 echo OK

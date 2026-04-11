@@ -6,6 +6,8 @@
 static int labelseq = 0;
 static int stack_depth = 0;
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx","r8","r9"};
+static int fn_stack_parity; 
+
 
 static bool is_ptr(Type *ty){
     return ty && ty->kind == TY_PTR;
@@ -13,21 +15,6 @@ static bool is_ptr(Type *ty){
 
 static bool is_int(Type *ty){
     return ty && ty->kind == TY_INT;
-}
-
-void gen_lval(Node *node){
-    if(node->kind == ND_LVAR){
-        printf("  mov rax, rbp\n");
-        printf("  sub rax, %d\n", node->offset);
-        printf("  push rax\n");
-    }else if(node->kind == ND_GVAR){
-        printf("  lea rax, [rip + %.*s]\n", node->gvar->len, node->gvar->name);
-        printf("  push rax\n");
-    }else if(node->kind == ND_DEREF){
-        gen(node->lhs);
-    }else{
-        error("代入の左辺値が変数ではありません．");
-    }
 }
 
 void emit_push(const char *reg){
@@ -39,6 +26,22 @@ void emit_push_imm(int val){
     printf("  push %d\n", val);
     stack_depth++;
 }
+
+void gen_lval(Node *node){
+    if(node->kind == ND_LVAR){
+        printf("  mov rax, rbp\n");
+        printf("  sub rax, %d\n", node->offset);
+        emit_push("rax");
+    }else if(node->kind == ND_GVAR){
+        printf("  lea rax, [rip + %.*s]\n", node->gvar->len, node->gvar->name);
+        emit_push("rax");
+    }else if(node->kind == ND_DEREF){
+        gen(node->lhs);
+    }else{
+        error("代入の左辺値が変数ではありません．");
+    }
+}
+
 
 void emit_pop(const char *reg){
     printf("  pop %s\n", reg);
@@ -58,17 +61,10 @@ void gen(Node *node){
             emit_pop("rax");
             printf("  mov %s, rax\n", argreg[i]);
         }
-        bool need_align = (stack_depth % 2 == 0);
-        if(need_align){
-            printf("  sub rsp, 8\n");
-            stack_depth++;
-        } 
-        printf("  mov al, 0\n");
-        printf("  call %.*s\n",node->funcname_len, node->funcname);
-        if(need_align){
-            printf("  add rsp, 8\n");
-            stack_depth--;
-        } 
+        printf("  sub rsp, 8\n");
+        printf("  xor eax, eax\n");
+        printf("  call %.*s\n", node->funcname_len, node->funcname);
+        printf("  add rsp, 8\n");
         emit_push("rax");
         return;
     }
@@ -166,10 +162,12 @@ void gen(Node *node){
                 return;
             }
 
-            if(node->ty->kind == TY_CHAR){
-                printf("  movsx rax, BYTE PTR [rax]\n");
-            }else{
-                printf("  mov rax, [rax]\n");
+            if (node->lhs->ty->kind == TY_CHAR) {
+                printf("  mov BYTE PTR [rax], dil\n");
+            } else if (node->lhs->ty->kind == TY_INT) {
+                printf("  mov DWORD PTR [rax], edi\n");
+            } else {
+                printf("  mov [rax], rdi\n");   // ptr など 8バイト
             }
             emit_push("rax");
             return;
@@ -183,10 +181,12 @@ void gen(Node *node){
                 return;
             }
 
-            if(node->ty->kind == TY_CHAR){
-                printf("  movsx rax, BYTE PTR [rax]\n");
-            }else{
-                printf("  mov rax, [rax]\n");
+            if (node->lhs->ty->kind == TY_CHAR) {
+                printf("  mov BYTE PTR [rax], dil\n");
+            } else if (node->lhs->ty->kind == TY_INT) {
+                printf("  mov DWORD PTR [rax], edi\n");
+            } else {
+                printf("  mov [rax], rdi\n");   // ptr など 8バイト
             }
             emit_push("rax");
             return;
@@ -196,11 +196,14 @@ void gen(Node *node){
             gen(node->rhs);
             emit_pop("rdi");
             emit_pop("rax");
-            if(node->lhs->ty->kind == TY_CHAR){
+            if (node->lhs->ty->kind == TY_CHAR) {
                 printf("  mov BYTE PTR [rax], dil\n");
-            }else{
-                printf("  mov [rax], rdi\n");
+            } else if (node->lhs->ty->kind == TY_INT) {
+                printf("  mov DWORD PTR [rax], edi\n");
+            } else {
+                printf("  mov [rax], rdi\n");   // ptr など 8バイト
             }
+
             emit_push("rdi");
             return;
 
@@ -285,16 +288,16 @@ void gen(Node *node){
 void gen_func(Function *fn){
     printf(".globl %.*s\n", fn->name_len, fn->name);
     printf("%.*s:\n", fn->name_len, fn->name);
-    stack_depth = 0;
     emit_push("rbp");
     printf("  mov rbp, rsp\n");
+    stack_depth = 0;
 
     int max_offset = 0;
     for (LVar *v = fn->locals; v; v=v->next){
         if (max_offset < v->offset) max_offset = v->offset;
     }
     printf("  sub rsp, %d\n", max_offset);
-    stack_depth += max_offset / 8;
+    fn_stack_parity = (max_offset / 8) % 2;
 
     int i = 0;
     static char *argreg[] = {"rdi", "rsi", "rdx", "rcx","r8","r9"};
@@ -305,7 +308,6 @@ void gen_func(Function *fn){
     gen(fn->body);
 
     printf("  mov rsp, rbp\n");
-    emit_pop("rbp");
-    stack_depth = 0;
+    printf("  pop rbp\n");
     printf("  ret\n");
 }

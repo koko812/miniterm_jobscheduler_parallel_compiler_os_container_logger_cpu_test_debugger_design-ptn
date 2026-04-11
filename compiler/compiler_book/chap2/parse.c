@@ -247,12 +247,34 @@ Token *tokenize(){
         }
 
         if (*p == '"'){
-            char *start = ++p;
-            while (*p && *p != '"') p++;
-            if (*p != '"') error_at(p, "クォーテーションが閉じていません");
-
-            cur = new_token(TK_STR, cur, p-start, start);
             p++;
+            
+            char buf[4096];
+            int len = 0;
+
+            while (*p != '"'){
+                if(*p == '\0'){
+                    error_at(p, "クォーテーションが閉じていません");
+                }
+
+                if(*p == '\\'){
+                    p++;
+                    if (*p == 'n') buf[len++] = '\n';
+                    else if (*p == '\\') buf[len++] = '\\';
+                    else if (*p == '"') buf[len++] = '"';
+                    else error_at(p, "無効なエスケープです");
+                    p++;
+                    continue;
+                }
+                buf[len++] = *p++;
+            }
+            p++;
+
+            char *s = calloc(1, len+1);
+            memcpy(s, buf, len);
+            s[len] = '\0';
+
+            cur = new_token(TK_STR, cur, len, s);
             continue;
         }
 
