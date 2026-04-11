@@ -5,7 +5,7 @@ assert(){
     input="$2"
 
     ./dentaku "$input" > temp.s
-    gcc -o temps temp.s ext.o
+    gcc -o temps temp.s
     ./temps
     actual="$?"
 
