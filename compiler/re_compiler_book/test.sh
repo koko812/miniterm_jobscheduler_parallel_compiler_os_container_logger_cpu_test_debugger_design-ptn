@@ -1,5 +1,5 @@
 #!/bin/bash
-input="1+1+1-1+1 -1"
+input="2+3+1-4+8 -1"
 ./mini_cc "$input" > temp.s
 
 printf "<asm>\n"
