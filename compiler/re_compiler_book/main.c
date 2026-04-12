@@ -178,7 +178,15 @@ void dump_ast_indent(Node *node, int depth){
     dump_ast_indent(node->rhs, depth+1);
 }
 
-void dump_ast_prefix(Node *node, int depth){
+void dump_ast_prefix(Node *node){
+    if(node->kind == ND_NUM){
+        fprintf(stderr, "%d ", node->val);
+        return;
+    }
+    fprintf(stderr, "%-8s(", nd_kind_name[node->kind]);
+    dump_ast_prefix(node->lhs);
+    dump_ast_prefix(node->rhs);
+    fprintf(stderr, ")");
 }
 
 
@@ -228,7 +236,8 @@ int main(int argc, char **argv){
     gen(node);
 
     fprintf(stderr, "\n\n<AST>\n");
-    dump_ast_indent(node, 0);
+    //dump_ast_indent(node, 0);
+    dump_ast_prefix(node);
     fprintf(stderr, "\n");
 
     printf("  pop rax\n");
