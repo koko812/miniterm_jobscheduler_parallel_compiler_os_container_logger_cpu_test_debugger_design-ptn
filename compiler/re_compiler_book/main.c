@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <string.h>
 
 char *user_input;
 
@@ -69,6 +70,10 @@ bool consume_num(char op){
 }
 
 Token *expect(char op){
+    if(token->kind!=TK_RESERVED || token->str[0]!=op)
+        error();
+    token = token->next;
+    return token;
 }
 
 int expect_num(){
@@ -104,10 +109,27 @@ Token *tokenize(){
             p++;
             continue;
         }
-        if(*p=='+' || *p=='-'){
+
+        if(*p == "=="){
             cur = new_token(TK_RESERVED, cur, p++);
             continue;
         }
+
+        if(*p == "<="){
+            cur = new_token(TK_RESERVED, cur, p++);
+            continue;
+        }
+
+        if(*p == ">="){
+            cur = new_token(TK_RESERVED, cur, p++);
+            continue;
+        }
+
+        if(strchr("+-*/()<>",*p)){
+            cur = new_token(TK_RESERVED, cur, p++);
+            continue;
+        }
+
         if(isdigit(*p)){
             cur = new_token(TK_NUM, cur, p);
             cur->val = strtol(p, &p, 10);
@@ -148,24 +170,80 @@ Node *new_node_num(int val){
     return node;
 }
 
-Node *num(){
+Node *expr();
+
+Node *factor(){
+    fprintf(stderr, "factor: %-15s \'%.*s\'   val=%5d\n",
+            tk_kind_name[token->kind], 1, token->str, token->val);
+    if(consume('(')){
+        Node *node = expr();
+        expect(')');
+        return node;
+    }
+
     return new_node_num(expect_num());
 }
 
-Node *expr(){
-    Node *node = num();
+Node *unary(){
+    fprintf(stderr, "unary:  %-15s \'%.*s\'   val=%5d\n",
+            tk_kind_name[token->kind], 1, token->str, token->val);
+    if(consume('+')){
+        return unary();
+    }else if(consume('-')){
+        return new_node(ND_SUB, new_node_num(0), unary());
+    }else{
+        return factor();
+    }
+}
+
+// Node *unary(){
+//     fprintf(stderr, "unary:  %-15s \'%.*s\'   val=%5d\n",
+//             tk_kind_name[token->kind], 1, token->str, token->val);
+//     Node *node = factor();
+
+//     if(consume('+')){
+//         return node;
+//     }else if(consume('-')){
+//         node = new_node(ND_SUB, 0, factor());
+//     }else{
+//         return node;
+//     }
+// }
+
+Node *term(){
+    fprintf(stderr, "term:   %-15s \'%.*s\'   val=%5d\n",
+            tk_kind_name[token->kind], 1, token->str, token->val);
+    Node *node = unary();
 
     for(;;){
-        if(consume('+')){
-            node = new_node(ND_ADD, node, num());
+        if(consume('*')){
+            node = new_node(ND_MUL, node, unary());
         }
-        else if(consume('-')){
-            node = new_node(ND_SUB, node, num());
+        else if(consume('/')){
+            node = new_node(ND_DIV, node, unary());
         }else{
             return node;
         }
     }
 }
+
+Node *expr(){
+    fprintf(stderr, "expr:   %-15s \'%.*s\'   val=%5d\n",
+            tk_kind_name[token->kind], 1, token->str, token->val);
+    Node *node = term();
+
+    for(;;){
+        if(consume('+')){
+            node = new_node(ND_ADD, node, term());
+        }
+        else if(consume('-')){
+            node = new_node(ND_SUB, node, term());
+        }else{
+            return node;
+        }
+    }
+}
+
 
 void dump_ast_indent(Node *node, int depth){
     fprintf(stderr, "%*.s", depth, " ");
@@ -183,10 +261,10 @@ void dump_ast_prefix(Node *node){
         fprintf(stderr, "%d ", node->val);
         return;
     }
-    fprintf(stderr, "%-8s(", nd_kind_name[node->kind]);
+    fprintf(stderr, "%-7s(", nd_kind_name[node->kind]);
     dump_ast_prefix(node->lhs);
     dump_ast_prefix(node->rhs);
-    fprintf(stderr, ")");
+    fprintf(stderr, "\b)");
 }
 
 
@@ -209,6 +287,13 @@ void gen(Node *node){
         case ND_SUB:
             printf("  sub rax, rdi\n");
             break;
+        case ND_MUL:
+            printf("  imul rax, rdi\n");
+            break;
+        case ND_DIV:
+            printf("  cqo\n");
+            printf("  idiv rdi\n");
+            break;
         default:
             break;
     }
@@ -225,6 +310,7 @@ int main(int argc, char **argv){
 
     user_input = argv[1];
     token = tokenize();
+
     fprintf(stderr, "\n\n<Tokens>\n");
     dump_tokens();
 
@@ -232,12 +318,15 @@ int main(int argc, char **argv){
     printf(".globl main\n");
     printf("main:\n");
 
+    fprintf(stderr, "\n<Parse>\n");
     Node *node = expr();
+    if (!at_eof()) error();
+
     gen(node);
 
     fprintf(stderr, "\n\n<AST>\n");
-    //dump_ast_indent(node, 0);
-    dump_ast_prefix(node);
+    dump_ast_indent(node, 0);
+    //dump_ast_prefix(node);
     fprintf(stderr, "\n");
 
     printf("  pop rax\n");

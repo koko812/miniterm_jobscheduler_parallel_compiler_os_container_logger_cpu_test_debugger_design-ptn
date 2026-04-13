@@ -1,5 +1,5 @@
 #!/bin/bash
-input="4-3+1-4+8+1"
+input="1 + (2*3+4) * (3-1+2) - --- 4 "
 ./mini_cc "$input" > temp.s
 
 printf "<asm>\n"
