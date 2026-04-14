@@ -4,17 +4,27 @@
 #include <stdbool.h>
 #include <string.h>
 
+#ifdef DEBUG_PARSE
+#define TRACE() \
+    fprintf(stderr, "%11s:   %-15s '%.*s' val=%5d\n", \
+        __func__, tk_kind_name[token->kind], token->len, token->str, token->val)
+#else
+#define TRACE() ((void)0)
+#endif
+
 char *user_input;
 
 typedef enum{
     TK_RESERVED,
     TK_NUM,
+    TK_IDENT,
     TK_EOF,
 } Tokenkind;
 
 static const char *tk_kind_name[] = {
     "TK_RESERVED",
     "TK_NUM",
+    "TK_IDENT",
     "TK_EOF",
 };
 
@@ -24,6 +34,7 @@ struct Token{
     Token *next;
     int val;
     char *str;
+    int len;
 };
 
 Token *token;
@@ -34,7 +45,13 @@ typedef enum{
     ND_SUB,
     ND_MUL,
     ND_DIV,
+    ND_ASSIGN,
     ND_NUM,
+    ND_LVAR,
+    ND_LEQ,
+    ND_LTH,
+    ND_EQU,
+    ND_NEQ,
 } Nodekind;
 
 static const char *nd_kind_name[] = {
@@ -42,7 +59,13 @@ static const char *nd_kind_name[] = {
     "ND_SUB",
     "ND_MUL",
     "ND_DIV",
+    "ND_ASSIGN",
     "ND_NUM",
+    "ND_LVAR",
+    "ND_LEQ",
+    "ND_LTH",
+    "ND_EQU",
+    "ND_NEQ",
 };
 
 typedef struct Node Node;
@@ -53,14 +76,15 @@ struct Node{
     int val;
 };
 
-
-void error(){
-    fprintf(stderr, "間違ってます\n");
+void error(char *s){
+    fprintf(stderr, "\n%s\n", s);
     exit(1);
 }
 
-bool consume(char op){
-    if(token->kind!=TK_RESERVED || token->str[0]!=op)
+bool consume(char *op){
+    if(token->kind!=TK_RESERVED || 
+        token->len != strlen(op) ||
+        memcmp(op, token->str, token->len))
         return false;
     token = token->next;
     return true;
@@ -69,16 +93,18 @@ bool consume(char op){
 bool consume_num(char op){
 }
 
-Token *expect(char op){
-    if(token->kind!=TK_RESERVED || token->str[0]!=op)
-        error();
+Token *expect(char *op){
+    if(token->kind!=TK_RESERVED || 
+        token->len != strlen(op) ||
+        memcmp(op, token->str, token->len))
+        error("expect is missed");
     token = token->next;
     return token;
 }
 
 int expect_num(){
     if(token->kind!=TK_NUM){
-        error();
+        error("expect_num is missed");
     }
     int val = token->val;
     token = token->next;
@@ -89,14 +115,16 @@ bool at_eof(){
     return token->kind == TK_EOF;
 }
 
-Token *new_token(Tokenkind kind, Token *cur, char *str){
+Token *new_token(Tokenkind kind, Token *cur, char *str, int len){
     Token *tok = calloc(1, sizeof(Token));
     tok->kind = kind;
     tok->str = str;
     cur->next = tok;
+    tok->len = len;
 
     return tok;
 }
+
 
 Token head;
 Token *tokenize(){
@@ -110,29 +138,25 @@ Token *tokenize(){
             continue;
         }
 
-        if(*p == "=="){
-            cur = new_token(TK_RESERVED, cur, p++);
+        if(!strncmp(p, "==", 2) ||
+            !strncmp(p, "!=", 2) ||
+            !strncmp(p, ">=", 2) ||
+            !strncmp(p, "<=", 2)){
+            cur = new_token(TK_RESERVED, cur, p, 2);
+            p = p+2;
             continue;
         }
 
-        if(*p == "<="){
-            cur = new_token(TK_RESERVED, cur, p++);
-            continue;
-        }
-
-        if(*p == ">="){
-            cur = new_token(TK_RESERVED, cur, p++);
-            continue;
-        }
-
-        if(strchr("+-*/()<>",*p)){
-            cur = new_token(TK_RESERVED, cur, p++);
+        if(strchr("+-*/()<>=;", *p)){
+            cur = new_token(TK_RESERVED, cur, p++, 1);
             continue;
         }
 
         if(isdigit(*p)){
-            cur = new_token(TK_NUM, cur, p);
+            char *start = p;
+            cur = new_token(TK_NUM, cur, start, 0);
             cur->val = strtol(p, &p, 10);
+            cur->len = p - start;
             continue;
         }
 
@@ -140,7 +164,7 @@ Token *tokenize(){
         exit(1);
     }
 
-    new_token(TK_EOF, cur, p);
+    new_token(TK_EOF, cur, p, 0);
     return head.next;
 }
 
@@ -149,7 +173,7 @@ void dump_tokens(){
     Token *tok = head.next;
     while(tok){
         fprintf(stderr, "%-15s \'%.*s\'   val=%5d\n",
-                tk_kind_name[tok->kind], 1, tok->str, tok->val);
+                tk_kind_name[tok->kind], tok->len, tok->str, tok->val);
         tok = tok->next;
     }
 }
@@ -170,14 +194,13 @@ Node *new_node_num(int val){
     return node;
 }
 
-Node *expr();
+Node *add();
 
 Node *factor(){
-    fprintf(stderr, "factor: %-15s \'%.*s\'   val=%5d\n",
-            tk_kind_name[token->kind], 1, token->str, token->val);
-    if(consume('(')){
-        Node *node = expr();
-        expect(')');
+    TRACE();
+    if(consume("(")){
+        Node *node = add();
+        expect(")");
         return node;
     }
 
@@ -185,41 +208,26 @@ Node *factor(){
 }
 
 Node *unary(){
-    fprintf(stderr, "unary:  %-15s \'%.*s\'   val=%5d\n",
-            tk_kind_name[token->kind], 1, token->str, token->val);
-    if(consume('+')){
+    TRACE();
+    if(consume("+")){
         return unary();
-    }else if(consume('-')){
+    }else if(consume("-")){
         return new_node(ND_SUB, new_node_num(0), unary());
     }else{
         return factor();
     }
 }
 
-// Node *unary(){
-//     fprintf(stderr, "unary:  %-15s \'%.*s\'   val=%5d\n",
-//             tk_kind_name[token->kind], 1, token->str, token->val);
-//     Node *node = factor();
 
-//     if(consume('+')){
-//         return node;
-//     }else if(consume('-')){
-//         node = new_node(ND_SUB, 0, factor());
-//     }else{
-//         return node;
-//     }
-// }
-
-Node *term(){
-    fprintf(stderr, "term:   %-15s \'%.*s\'   val=%5d\n",
-            tk_kind_name[token->kind], 1, token->str, token->val);
+Node *mul(){
+    TRACE();
     Node *node = unary();
 
     for(;;){
-        if(consume('*')){
+        if(consume("*")){
             node = new_node(ND_MUL, node, unary());
         }
-        else if(consume('/')){
+        else if(consume("/")){
             node = new_node(ND_DIV, node, unary());
         }else{
             return node;
@@ -227,23 +235,79 @@ Node *term(){
     }
 }
 
-Node *expr(){
-    fprintf(stderr, "expr:   %-15s \'%.*s\'   val=%5d\n",
-            tk_kind_name[token->kind], 1, token->str, token->val);
-    Node *node = term();
+Node *add(){
+    TRACE();
+    Node *node = mul();
 
     for(;;){
-        if(consume('+')){
-            node = new_node(ND_ADD, node, term());
+        if(consume("+")){
+            node = new_node(ND_ADD, node, mul());
         }
-        else if(consume('-')){
-            node = new_node(ND_SUB, node, term());
+        else if(consume("-")){
+            node = new_node(ND_SUB, node, mul());
         }else{
             return node;
         }
     }
 }
 
+
+Node *relational(){
+    TRACE();
+    Node *node = add();
+
+    for(;;){
+        if(consume("==")){
+            node = new_node(ND_EQU, node, add());
+        }else if(consume("!=")){
+            node = new_node(ND_NEQ, add(), node);
+        }else if(consume("<=")){
+            node = new_node(ND_LEQ, add(), node);
+        }else if(consume(">=")){
+            node = new_node(ND_LEQ, add(), node);
+        }else if(consume("<")){
+            node = new_node(ND_LTH, node, add());
+        }else if(consume(">")){
+            node = new_node(ND_LTH, add(), node);
+        }else{
+            return node;
+        }
+    }
+}
+
+Node *equality(){
+    TRACE();
+    Node *node = relational();
+
+    for(;;){
+        if(consume("==")){
+            node = new_node(ND_EQU, node, relational());
+        }else if(consume("!=")){
+            node = new_node(ND_NEQ, node, relational());
+        }else{
+            return node;
+        }
+    }
+}
+
+Node *expr(){
+    Node *node = equality();
+    return node;
+}
+
+Node *stmt(){
+    Node *node = expr();
+    expect(";");
+    return node;
+}
+
+Node *code[100];
+int i = 0;
+void *program(){
+    while(!at_eof()){
+        code[i++] = stmt();
+    }
+}
 
 void dump_ast_indent(Node *node, int depth){
     fprintf(stderr, "%*.s", depth, " ");
@@ -294,6 +358,26 @@ void gen(Node *node){
             printf("  cqo\n");
             printf("  idiv rdi\n");
             break;
+        case ND_EQU:
+            printf("  cmp rax, rdi\n");
+            printf("  sete al\n");
+            printf("  movzb rax, al\n");
+            break;
+        case ND_NEQ:
+            printf("  cmp rax, rdi\n");
+            printf("  setne al\n");
+            printf("  movzb rax, al\n");
+            break;
+        case ND_LEQ:
+            printf("  cmp rax, rdi\n");
+            printf("  setle al\n");
+            printf("  movzb rax, al\n");
+            break;
+        case ND_LTH:
+            printf("  cmp rax, rdi\n");
+            printf("  setl al\n");
+            printf("  movzb rax, al\n");
+            break;
         default:
             break;
     }
@@ -319,17 +403,22 @@ int main(int argc, char **argv){
     printf("main:\n");
 
     fprintf(stderr, "\n<Parse>\n");
-    Node *node = expr();
-    if (!at_eof()) error();
+    //Node *node = equality();
+    program();
 
-    gen(node);
+    int j = 0;
+    while(j<i){
+        gen(code[j]);
+        printf("  pop rax\n");
+        fprintf(stderr, "\n<AST_%d>\n", j+1);
+        dump_ast_indent(code[j], 0);
+        // fprintf(stderr,"\nexpr\n");
+        //dump_ast_prefix(node);
+        fprintf(stderr, "\n");
+        j++;
+    }
 
-    fprintf(stderr, "\n\n<AST>\n");
-    dump_ast_indent(node, 0);
-    //dump_ast_prefix(node);
-    fprintf(stderr, "\n");
 
-    printf("  pop rax\n");
     printf("  ret\n");
     printf(".section .note.GNU-stack,\"\",@progbits\n");
 }

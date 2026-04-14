@@ -1,4 +1,4 @@
-CFLAGS=-std=c11 -g -static
+CFLAGS=-std=c11 -g -static -DDEBUG_PARSE
 SRCS=main.c 
 OBJS=$(SRCS:.c=.o)
 
