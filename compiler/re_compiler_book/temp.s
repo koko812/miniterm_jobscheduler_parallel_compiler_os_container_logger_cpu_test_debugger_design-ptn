@@ -1,19 +1,24 @@
 .intel_syntax noprefix
 .globl main
 main:
+  push rbp
+  mov rbp, rsp
+  sub rsp, 208
+  mov rax, rbp
+  sub rax, 8
+  push rax
   push 1
-  push 2
   pop rdi
   pop rax
-  imul rax, rdi
-  push rax
-  push 4
-  pop rdi
+  mov [rax], rdi
+  push rdi
   pop rax
-  add rax, rdi
+  mov rax, rbp
+  sub rax, 8
   push rax
   pop rax
-  push 1
+  mov rax, [rax]
+  push rax
   push 3
   push 2
   pop rdi
@@ -25,5 +30,7 @@ main:
   add rax, rdi
   push rax
   pop rax
+  mov rsp, rbp
+  pop rbp
   ret
 .section .note.GNU-stack,"",@progbits

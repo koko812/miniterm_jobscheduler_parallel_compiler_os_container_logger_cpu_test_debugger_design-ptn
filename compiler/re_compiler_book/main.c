@@ -39,6 +39,15 @@ struct Token{
 
 Token *token;
 
+typedef struct LVar LVar;
+struct LVar{
+    LVar *next;
+    char *str;
+    int len;
+    int offset;
+};
+LVar *locals;
+
 
 typedef enum{
     ND_ADD,
@@ -74,6 +83,7 @@ struct Node{
     Node *lhs;
     Node *rhs;
     int val;
+    int offset;
 };
 
 void error(char *s){
@@ -90,16 +100,24 @@ bool consume(char *op){
     return true;
 }
 
-bool consume_num(char op){
+bool consume_num(){
 }
 
-Token *expect(char *op){
+Token *consume_ident(){
+    if(token->kind!=TK_IDENT)
+        return false;
+    Token *tok = token;
+    token = token->next;
+    return tok;
+}
+
+
+void *expect(char *op){
     if(token->kind!=TK_RESERVED || 
         token->len != strlen(op) ||
         memcmp(op, token->str, token->len))
         error("expect is missed");
     token = token->next;
-    return token;
 }
 
 int expect_num(){
@@ -160,6 +178,14 @@ Token *tokenize(){
             continue;
         }
 
+        if(isalpha(*p)){
+            char *start = p;
+            while(isalnum(*p) || *p == '_') p++;
+            int len = p - start;
+            cur = new_token(TK_IDENT, cur, start, len);
+            continue;
+        }
+
         fprintf(stderr, "[ERROR]: failed to tokenize.\n");
         exit(1);
     }
@@ -194,6 +220,15 @@ Node *new_node_num(int val){
     return node;
 }
 
+LVar *find_LVar(Token *tok){
+    for(LVar *var = locals; var; var->next){
+        if(tok->len == var->len, !memcmp(tok->str, var->str, var->len))
+            return var;
+        else
+            return NULL;
+    }
+}
+
 Node *add();
 
 Node *factor(){
@@ -203,7 +238,25 @@ Node *factor(){
         expect(")");
         return node;
     }
+    Token *tok = consume_ident();
+    if(tok){
+        Node *node = calloc(1, sizeof(Node));
+        node->kind = ND_LVAR;
+        LVar *lvar = find_LVar(tok);
+        if(lvar){
+            node->offset = lvar->offset;
+        }else{
+            LVar *lvar = calloc(1, sizeof(LVar));
+            lvar->str = tok->str;
+            lvar->next = locals;
+            lvar->len = tok->len;
+            lvar->offset = locals ? locals->offset+8 : 8;
+            node->offset = lvar->offset;
+            locals = lvar;
+        }
+        return node;
 
+    }
     return new_node_num(expect_num());
 }
 
@@ -227,9 +280,7 @@ Node *mul(){
         if(consume("*")){
             node = new_node(ND_MUL, node, unary());
         }
-        else if(consume("/")){
-            node = new_node(ND_DIV, node, unary());
-        }else{
+        else if(consume("/")){ node = new_node(ND_DIV, node, unary()); }else{
             return node;
         }
     }
@@ -275,15 +326,23 @@ Node *relational(){
     }
 }
 
+
+Node *assign(){
+    Node *node = relational();
+    if(consume("="))
+        node = new_node(ND_ASSIGN, node, assign());
+    return node;
+}
+
+
 Node *equality(){
     TRACE();
-    Node *node = relational();
-
+    Node *node = assign();
     for(;;){
         if(consume("==")){
-            node = new_node(ND_EQU, node, relational());
+            node = new_node(ND_EQU, node, assign());
         }else if(consume("!=")){
-            node = new_node(ND_NEQ, node, relational());
+            node = new_node(ND_NEQ, node, assign());
         }else{
             return node;
         }
@@ -310,8 +369,9 @@ void *program(){
 }
 
 void dump_ast_indent(Node *node, int depth){
+    if(!node) return;
     fprintf(stderr, "%*.s", depth, " ");
-    if(node->kind == ND_NUM){
+    if(node->kind == ND_NUM || node->kind == ND_LVAR){
         fprintf(stderr, "%-8s %d\n", nd_kind_name[node->kind], node->val);
         return;
     }
@@ -332,10 +392,35 @@ void dump_ast_prefix(Node *node){
 }
 
 
+void gen_lval(Node *node){
+    if(node->kind != ND_LVAR){
+        error("代入の左辺値が変数じゃないよ！");
+    }
+    printf("  mov rax, rbp\n");
+    printf("  sub rax, %d\n", node->offset);
+    printf("  push rax\n");
+}
+
+
 void gen(Node *node){
-    if(node->kind==ND_NUM){
-        printf("  push %d\n", node->val);
-        return;
+    switch(node->kind){
+        case ND_NUM:
+            printf("  push %d\n", node->val);
+            return;
+        case ND_LVAR:
+            gen_lval(node);
+            printf("  pop rax\n");
+            printf("  mov rax, [rax]\n");
+            printf("  push rax\n");
+            return;
+        case ND_ASSIGN:
+            gen_lval(node->lhs);
+            gen(node->rhs);
+            printf("  pop rdi\n");
+            printf("  pop rax\n");
+            printf("  mov [rax], rdi\n");
+            printf("  push rdi\n");
+            return;
     }
 
     gen(node->lhs);
@@ -402,8 +487,11 @@ int main(int argc, char **argv){
     printf(".globl main\n");
     printf("main:\n");
 
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, 208\n");
+
     fprintf(stderr, "\n<Parse>\n");
-    //Node *node = equality();
     program();
 
     int j = 0;
@@ -412,13 +500,12 @@ int main(int argc, char **argv){
         printf("  pop rax\n");
         fprintf(stderr, "\n<AST_%d>\n", j+1);
         dump_ast_indent(code[j], 0);
-        // fprintf(stderr,"\nexpr\n");
-        //dump_ast_prefix(node);
         fprintf(stderr, "\n");
         j++;
     }
 
-
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
     printf("  ret\n");
     printf(".section .note.GNU-stack,\"\",@progbits\n");
 }
