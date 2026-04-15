@@ -18,6 +18,7 @@ typedef enum{
     TK_RESERVED,
     TK_NUM,
     TK_IDENT,
+    TK_RETURN,
     TK_EOF,
 } Tokenkind;
 
@@ -25,6 +26,7 @@ static const char *tk_kind_name[] = {
     "TK_RESERVED",
     "TK_NUM",
     "TK_IDENT",
+    "TK_RETURN",
     "TK_EOF",
 };
 
@@ -61,6 +63,7 @@ typedef enum{
     ND_LTH,
     ND_EQU,
     ND_NEQ,
+    ND_RETURN,
 } Nodekind;
 
 static const char *nd_kind_name[] = {
@@ -75,6 +78,7 @@ static const char *nd_kind_name[] = {
     "ND_LTH",
     "ND_EQU",
     "ND_NEQ",
+    "ND_RETURN",
 };
 
 typedef struct Node Node;
@@ -82,6 +86,7 @@ struct Node{
     Nodekind kind;
     Node *lhs;
     Node *rhs;
+    LVar *var;
     int val;
     int offset;
 };
@@ -95,6 +100,13 @@ bool consume(char *op){
     if(token->kind!=TK_RESERVED || 
         token->len != strlen(op) ||
         memcmp(op, token->str, token->len))
+        return false;
+    token = token->next;
+    return true;
+}
+
+bool consume_kw(Tokenkind kind){
+    if(token->kind!=kind)
         return false;
     token = token->next;
     return true;
@@ -153,6 +165,12 @@ Token *tokenize(){
     while(*p){
         if(isspace(*p)){
             p++;
+            continue;
+        }
+
+        if(!strncmp(p, "return", 6) && !isalnum(p[6])){
+            cur = new_token(TK_RETURN, cur, p, 6);
+            p = p+6;
             continue;
         }
 
@@ -221,12 +239,11 @@ Node *new_node_num(int val){
 }
 
 LVar *find_LVar(Token *tok){
-    for(LVar *var = locals; var; var->next){
-        if(tok->len == var->len, !memcmp(tok->str, var->str, var->len))
+    for(LVar *var = locals; var; var=var->next){
+        if(tok->len == var->len && !memcmp(tok->str, var->str, var->len))
             return var;
-        else
-            return NULL;
     }
+    return NULL;
 }
 
 Node *add();
@@ -245,13 +262,15 @@ Node *factor(){
         LVar *lvar = find_LVar(tok);
         if(lvar){
             node->offset = lvar->offset;
+            node->var = lvar;
         }else{
-            LVar *lvar = calloc(1, sizeof(LVar));
+            lvar = calloc(1, sizeof(LVar));
             lvar->str = tok->str;
             lvar->next = locals;
             lvar->len = tok->len;
             lvar->offset = locals ? locals->offset+8 : 8;
             node->offset = lvar->offset;
+            node->var = lvar;
             locals = lvar;
         }
         return node;
@@ -350,12 +369,22 @@ Node *equality(){
 }
 
 Node *expr(){
+    TRACE();
     Node *node = equality();
     return node;
 }
 
 Node *stmt(){
-    Node *node = expr();
+    TRACE();
+    Node *node;
+
+    if(consume_kw(TK_RETURN)){
+        node = calloc(1, sizeof(Node));
+        node->kind=ND_RETURN;
+        node->lhs=expr();
+    }else{
+        node = expr();
+    }
     expect(";");
     return node;
 }
@@ -371,8 +400,12 @@ void *program(){
 void dump_ast_indent(Node *node, int depth){
     if(!node) return;
     fprintf(stderr, "%*.s", depth, " ");
-    if(node->kind == ND_NUM || node->kind == ND_LVAR){
+    if(node->kind == ND_NUM){
         fprintf(stderr, "%-8s %d\n", nd_kind_name[node->kind], node->val);
+        return;
+    }
+    if(node->kind == ND_LVAR){
+        fprintf(stderr, "%-8s %.*s\n", nd_kind_name[node->kind], node->var->len, node->var->str);
         return;
     }
     fprintf(stderr, "%-8s\n", nd_kind_name[node->kind]);
@@ -403,6 +436,16 @@ void gen_lval(Node *node){
 
 
 void gen(Node *node){
+    switch(node->kind){
+        case ND_RETURN:
+            gen(node->lhs);
+            printf("  pop rax\n");
+            printf("  mov rsp, rbp\n");
+            printf("  pop rbp\n");
+            printf("  ret\n");
+            return;
+    }
+
     switch(node->kind){
         case ND_NUM:
             printf("  push %d\n", node->val);
