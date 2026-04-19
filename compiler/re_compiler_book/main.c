@@ -19,6 +19,10 @@ typedef enum{
     TK_NUM,
     TK_IDENT,
     TK_RETURN,
+    TK_IF,
+    TK_ELSE,
+    TK_WHILE,
+    TK_FOR,
     TK_EOF,
 } Tokenkind;
 
@@ -27,6 +31,10 @@ static const char *tk_kind_name[] = {
     "TK_NUM",
     "TK_IDENT",
     "TK_RETURN",
+    "TK_IF",
+    "TK_ELSE",
+    "TK_WHILE",
+    "TK_FOR",
     "TK_EOF",
 };
 
@@ -63,7 +71,11 @@ typedef enum{
     ND_LTH,
     ND_EQU,
     ND_NEQ,
+    ND_IF,
+    ND_WHILE,
+    ND_FOR,
     ND_RETURN,
+    ND_BLOCK,
 } Nodekind;
 
 static const char *nd_kind_name[] = {
@@ -78,7 +90,11 @@ static const char *nd_kind_name[] = {
     "ND_LTH",
     "ND_EQU",
     "ND_NEQ",
+    "ND_IF",
+    "ND_WHILE",
+    "ND_FOR",
     "ND_RETURN",
+    "ND_BLOCK",
 };
 
 typedef struct Node Node;
@@ -86,6 +102,13 @@ struct Node{
     Nodekind kind;
     Node *lhs;
     Node *rhs;
+    Node *cond;
+    Node *then;
+    Node *els;
+    Node *init;
+    Node *inc;
+    Node *body;
+    Node *next;
     LVar *var;
     int val;
     int offset;
@@ -155,6 +178,12 @@ Token *new_token(Tokenkind kind, Token *cur, char *str, int len){
     return tok;
 }
 
+int match_keyword(char* p, char* key){
+    int len = strlen(key);
+    if (strncmp(p, key, len) == 0 && !isalnum(p[len]))
+        return len;
+    return 0;
+}
 
 Token head;
 Token *tokenize(){
@@ -163,14 +192,39 @@ Token *tokenize(){
     char *p = user_input;
 
     while(*p){
+        int len = 0;
         if(isspace(*p)){
             p++;
             continue;
         }
 
-        if(!strncmp(p, "return", 6) && !isalnum(p[6])){
-            cur = new_token(TK_RETURN, cur, p, 6);
-            p = p+6;
+        if((len = match_keyword(p, "if"))){
+            cur = new_token(TK_IF, cur, p, len);
+            p += len;
+            continue;
+        }
+
+        if((len = match_keyword(p, "else"))){
+            cur = new_token(TK_ELSE, cur, p, len);
+            p += len;
+            continue;
+        }
+
+        if((len = match_keyword(p, "while"))){
+            cur = new_token(TK_WHILE, cur, p, len);
+            p += len;
+            continue;
+        }
+
+        if((len = match_keyword(p, "for"))){
+            cur = new_token(TK_FOR, cur, p, len);
+            p += len;
+            continue;
+        }
+
+        if((len = match_keyword(p, "return"))){
+            cur = new_token(TK_RETURN, cur, p, len);
+            p += len;
             continue;
         }
 
@@ -183,7 +237,7 @@ Token *tokenize(){
             continue;
         }
 
-        if(strchr("+-*/()<>=;", *p)){
+        if(strchr("+-*/()<>=;{}", *p)){
             cur = new_token(TK_RESERVED, cur, p++, 1);
             continue;
         }
@@ -378,6 +432,70 @@ Node *stmt(){
     TRACE();
     Node *node;
 
+    if(consume("{")){
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_BLOCK;
+
+        Node *head = NULL;
+        Node *cur = NULL;
+        
+        while(!consume("}")){
+            Node* stmt_node = stmt();
+            if(!head) head = stmt_node;
+            else cur->next = stmt_node;
+            cur = stmt_node;
+        }
+
+        node->body = head;
+        return node;
+    }
+
+    if(consume_kw(TK_IF)){
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_IF;
+        expect("(");
+        node->cond = expr();
+        expect(")");
+        node->then = stmt();
+        if(consume_kw(TK_ELSE)){
+            node->els = stmt();
+        }
+
+        return node;
+    }
+
+    if(consume_kw(TK_WHILE)){
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_WHILE;
+        expect("(");
+        node->cond = expr();
+        expect(")");
+        node->then = stmt();
+
+        return node;
+    }
+
+    if(consume_kw(TK_FOR)){
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_FOR;
+        expect("(");
+        if(!consume(";")){
+            node->init = expr();
+        }
+        expect(";");
+        if(!consume(";")){
+            node->cond = expr();
+        }
+        expect(";");
+        if(!consume(")")){
+            node->inc = expr();
+            expect(")");
+        }
+        node->then = stmt();
+
+        return node;
+    }
+
     if(consume_kw(TK_RETURN)){
         node = calloc(1, sizeof(Node));
         node->kind=ND_RETURN;
@@ -386,6 +504,7 @@ Node *stmt(){
         node = expr();
     }
     expect(";");
+
     return node;
 }
 
@@ -425,52 +544,143 @@ void dump_ast_prefix(Node *node){
 }
 
 
+
+
+
+static int stack_depth=0;
+static void emit_push(char *reg){
+    printf("  push %s\n", reg);
+    stack_depth++;
+}
+
+static void emit_push_num(int num){
+    printf("  push %d\n", num);
+    stack_depth++;
+}
+
+static void emit_pop(char *reg){
+    printf("  pop %s\n", reg);
+    stack_depth--;
+}
+
 void gen_lval(Node *node){
     if(node->kind != ND_LVAR){
         error("代入の左辺値が変数じゃないよ！");
     }
     printf("  mov rax, rbp\n");
     printf("  sub rax, %d\n", node->offset);
-    printf("  push rax\n");
+    emit_push("rax");
 }
 
-
 void gen(Node *node){
+    static int cnt = 0;
     switch(node->kind){
+        case ND_BLOCK: {
+            Node *body = node->body;
+            while(body){
+                gen(body);
+                emit_pop("rax");
+                body = body->next;
+            }
+            emit_push_num(0);
+            return;
+        }
+
         case ND_RETURN:
             gen(node->lhs);
-            printf("  pop rax\n");
+            emit_pop("rax");
             printf("  mov rsp, rbp\n");
-            printf("  pop rbp\n");
+            emit_pop("rbp");
             printf("  ret\n");
             return;
+        
+        case ND_IF: {
+            int seq = cnt++;
+            gen(node->cond);
+            emit_pop("rax");
+            printf("  cmp rax, 0\n");
+            if(!node->els){
+                printf("  je .Lend%d\n", seq);
+                gen(node->then);
+            }else{
+                printf("  je .Lelse%d\n", seq);
+                gen(node->then);
+                printf("  jmp .Lend%d\n", seq);
+                printf(".Lelse%d:\n", seq);
+                gen(node->els);
+            }
+            printf(".Lend%d:\n", seq);
+            emit_pop("rax");
+            emit_push_num(0);
+            return;
+        }
+
+        case ND_WHILE: {
+            int seq = cnt++;
+            printf(".Lbegin%d:\n", seq);
+            gen(node->cond);
+            emit_pop("rax");
+            printf("  cmp rax, 0\n");
+            printf("  je .Lend%d\n", seq);
+            gen(node->then);
+            emit_pop("rax");
+            printf("  jmp .Lbegin%d\n", seq);
+            printf(".Lend%d:\n", seq);
+            emit_push_num(0);
+            return;
+        }
+
+        case ND_FOR: {
+            int seq = cnt++;
+            if(node->init){
+                gen(node->init);
+                emit_pop("rax");
+            }
+            printf(".Lbegin%d:\n", seq);
+            if(node->cond){
+                gen(node->cond);
+                emit_pop("rax");
+                printf("  cmp rax, 0\n");
+                printf("  je .Lend%d\n", seq);
+            }
+            gen(node->then);
+            emit_pop("rax");
+            if(node->inc){
+                gen(node->inc);
+                emit_pop("rax");
+            }
+            printf("  jmp .Lbegin%d\n", seq);
+            printf(".Lend%d:\n", seq);
+            emit_push_num(0);
+            return;
+        }
     }
 
     switch(node->kind){
         case ND_NUM:
-            printf("  push %d\n", node->val);
+            emit_push_num(node->val);
             return;
         case ND_LVAR:
             gen_lval(node);
-            printf("  pop rax\n");
+            emit_pop("rax");
             printf("  mov rax, [rax]\n");
-            printf("  push rax\n");
+            emit_push("rax");
             return;
         case ND_ASSIGN:
             gen_lval(node->lhs);
             gen(node->rhs);
-            printf("  pop rdi\n");
-            printf("  pop rax\n");
+            emit_pop("rdi");
+            emit_pop("rax");
             printf("  mov [rax], rdi\n");
-            printf("  push rdi\n");
+            emit_push("rdi");
             return;
     }
 
     gen(node->lhs);
     gen(node->rhs);
 
-    printf("  pop rdi\n");
-    printf("  pop rax\n");
+    emit_pop("rdi");
+    emit_pop("rax");
 
     switch (node->kind){
         case ND_ADD:
@@ -510,7 +720,7 @@ void gen(Node *node){
             break;
     }
 
-    printf("  push rax\n");
+    emit_push("rax");
 }
 
 
@@ -530,7 +740,7 @@ int main(int argc, char **argv){
     printf(".globl main\n");
     printf("main:\n");
 
-    printf("  push rbp\n");
+    emit_push("rbp");
     printf("  mov rbp, rsp\n");
     printf("  sub rsp, 208\n");
 
@@ -540,7 +750,7 @@ int main(int argc, char **argv){
     int j = 0;
     while(j<i){
         gen(code[j]);
-        printf("  pop rax\n");
+        emit_pop("rax");
         fprintf(stderr, "\n<AST_%d>\n", j+1);
         dump_ast_indent(code[j], 0);
         fprintf(stderr, "\n");
@@ -548,7 +758,7 @@ int main(int argc, char **argv){
     }
 
     printf("  mov rsp, rbp\n");
-    printf("  pop rbp\n");
+    emit_pop("rbp");
     printf("  ret\n");
     printf(".section .note.GNU-stack,\"\",@progbits\n");
 }
