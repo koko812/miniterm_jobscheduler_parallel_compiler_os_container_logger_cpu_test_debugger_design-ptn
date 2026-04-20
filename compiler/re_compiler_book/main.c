@@ -17,6 +17,7 @@ char *user_input;
 typedef enum{
     TK_RESERVED,
     TK_NUM,
+    TK_INT,
     TK_IDENT,
     TK_RETURN,
     TK_IF,
@@ -29,6 +30,7 @@ typedef enum{
 static const char *tk_kind_name[] = {
     "TK_RESERVED",
     "TK_NUM",
+    "TK_INT",
     "TK_IDENT",
     "TK_RETURN",
     "TK_IF",
@@ -49,10 +51,24 @@ struct Token{
 
 Token *token;
 
+
+typedef enum{
+    TY_INT,
+    TY_PTR,
+} Typekind;
+
+typedef struct Type Type;
+struct Type {
+    Typekind kind;
+    Type *ptr_to;
+};
+
+
 typedef struct LVar LVar;
 struct LVar{
     LVar *next;
     LVar *next_param;
+    Type *ty;
     char *str;
     int len;
     int offset;
@@ -80,6 +96,7 @@ typedef enum{
     ND_RETURN,
     ND_BLOCK,
     ND_FUNCALL,
+    ND_NULL,
 } Nodekind;
 
 static const char *nd_kind_name[] = {
@@ -102,6 +119,7 @@ static const char *nd_kind_name[] = {
     "ND_RETURN",
     "ND_BLOCK",
     "ND_FUNCALL",
+    "ND_NULL",
 };
 
 typedef struct Node Node;
@@ -118,6 +136,7 @@ struct Node{
     Node *next;
     Node *args;
     LVar *var;
+    Type *ty;
     char *funcname;
     int val;
     int offset;
@@ -192,6 +211,13 @@ Token *expect_ident(){
     return tok;
 }
 
+bool expect_kw(Tokenkind kind){
+    if(token->kind!=kind)
+        error("expect_kw is missed");
+    token = token->next;
+    return true;
+}
+
 bool at_eof(){
     return token->kind == TK_EOF;
 }
@@ -256,6 +282,12 @@ Token *tokenize(){
             continue;
         }
 
+        if((len = match_keyword(p, "int"))){
+            cur = new_token(TK_INT, cur, p, len);
+            p += len;
+            continue;
+        }
+
         if(!strncmp(p, "==", 2) ||
             !strncmp(p, "!=", 2) ||
             !strncmp(p, ">=", 2) ||
@@ -304,6 +336,46 @@ void dump_tokens(){
     }
 }
 
+Type *new_type(Typekind kind, Type *ptr_to){
+    Type *ty = calloc(1, sizeof(Type));
+    ty->kind = kind;
+    ty->ptr_to = ptr_to;
+    return ty;
+}
+
+Type *int_type(){
+    return new_type(TY_INT, NULL);
+}
+
+Type *ptr_to(Type *base){
+    return new_type(TY_PTR, base);
+}
+
+void add_type(Node *node){
+    if(!node) return;
+    add_type(node->lhs);
+    add_type(node->rhs);
+
+    switch(node->kind){
+        case ND_NUM:
+            node->ty = int_type();
+            return;
+        case ND_LVAR:
+            node->ty = node->var->ty;
+            return;
+        case ND_ASSIGN:
+            node->ty = node->lhs->ty;
+            return;
+        case ND_ADDR:
+            node->ty = ptr_to(node->lhs->ty);
+            return;
+        case ND_DEREF:
+            if(node->lhs->ty->kind != TY_PTR)
+                error("ポインタ型じゃないよ！");
+            node->ty = node->lhs->ty->ptr_to;
+            return;
+    }
+}
 
 Node *new_node(Nodekind kind, Node *lhs, Node *rhs){
     Node *node = calloc(1, sizeof(Node));
@@ -317,8 +389,7 @@ Node *new_node_num(int val){
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_NUM;
     node->val = val;
-    return node;
-}
+    return node; }
 
 LVar *find_LVar(Token *tok){
     for(LVar *var = locals; var; var=var->next){
@@ -334,7 +405,7 @@ Node *expr();
 Node *factor(){
     TRACE();
     if(consume("(")){
-        Node *node = add();
+        Node *node = expr();
         expect(")");
         return node;
     }
@@ -366,14 +437,7 @@ Node *factor(){
                 node->offset = lvar->offset;
                 node->var = lvar;
             }else{
-                lvar = calloc(1, sizeof(LVar));
-                lvar->str = tok->str;
-                lvar->next = locals;
-                lvar->len = tok->len;
-                lvar->offset = locals ? locals->offset+8 : 8;
-                node->offset = lvar->offset;
-                node->var = lvar;
-                locals = lvar;
+                error("定義されてない変数だよ！");
             }
         }
         return node;
@@ -549,21 +613,63 @@ Node *stmt(){
         return node;
     }
 
+    if(consume_kw(TK_FOR)){
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_FOR;
+        expect("(");
+        if(!consume(";")){
+            node->init = expr();
+        }
+        expect(";");
+        if(!consume(";")){
+            node->cond = expr();
+        }
+        expect(";");
+        if(!consume(")")){
+            node->inc = expr();
+            expect(")");
+        }
+        node->then = stmt();
+
+        return node;
+    }
+
+    if(consume_kw(TK_INT)){
+        Type *ty = int_type();
+        while(consume("*")){
+            ty = ptr_to(ty);
+        }
+        Token *tok = expect_ident();
+        LVar *lvar = calloc(1, sizeof(LVar));
+        lvar->str = tok->str;
+        lvar->next = locals;
+        lvar->len = tok->len;
+        lvar->ty = ty;
+        lvar->offset = locals ? locals->offset+8 : 8;
+        locals = lvar;
+        node = calloc(1, sizeof(Node));
+        node->kind=ND_NULL;
+        expect(";");
+        return node;
+    }
+
     if(consume_kw(TK_RETURN)){
         node = calloc(1, sizeof(Node));
         node->kind=ND_RETURN;
         node->lhs=expr();
-    }else{
-        node = expr();
+        expect(";");
+        return node;
     }
-    expect(";");
 
+    node = expr();
+    expect(";");
     return node;
 }
 
 Function *function(){
     TRACE();
     Function *fn=calloc(1, sizeof(Function));
+    expect_kw(TK_INT);
     Token *tok = expect_ident();
     fn->name = tok->str;
     fn->name_len = tok->len;
@@ -573,12 +679,18 @@ Function *function(){
     LVar *params_head = NULL;
     LVar *params_cur = NULL;
     while(!consume(")")){
+        expect_kw(TK_INT);
+        Type *ty = int_type();
+        while(consume("*")){
+            ty = ptr_to(ty);
+        }
         Token *tok = expect_ident();
         LVar *lvar = calloc(1, sizeof(LVar));
         lvar->str = tok->str;
         lvar->next = locals;
         lvar->len = tok->len;
         lvar->offset = locals ? locals->offset+8 : 8;
+        lvar->ty = ty;
         locals = lvar;
 
         if(!params_head) params_head = lvar;
@@ -603,8 +715,11 @@ Function *code[100];
 int i = 0;
 void program(){
     while(!at_eof()){
-        code[i++] = function();
+        code[i] = function();
+        add_type(code[i]->body);
+        i++;
     }
+    code[i] = NULL;
 }
 
 void dump_ast_indent(Node *node, int depth){
@@ -652,13 +767,18 @@ static void emit_pop(char *reg){
     stack_depth--;
 }
 
+void gen(Node *node);
 void gen_lval(Node *node){
-    if(node->kind != ND_LVAR){
+    if(node->kind == ND_LVAR){
+        printf("  mov rax, rbp\n");
+        printf("  sub rax, %d\n", node->offset);
+        emit_push("rax");
+    }else if(node->kind == ND_DEREF){
+        gen(node->lhs);
+        return;
+    }else{
         error("代入の左辺値が変数じゃないよ！");
     }
-    printf("  mov rax, rbp\n");
-    printf("  sub rax, %d\n", node->offset);
-    emit_push("rax");
 }
 
 void gen(Node *node){
@@ -769,6 +889,10 @@ void gen(Node *node){
             emit_pop("rax");
             printf("  mov rax, [rax]\n");
             emit_push("rax");
+            return;
+
+        case ND_NULL:
+            emit_push_num(0);
             return;
     }
 
@@ -887,3 +1011,4 @@ int main(int argc, char **argv){
 
     printf(".section .note.GNU-stack,\"\",@progbits\n");
 }
+

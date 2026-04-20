@@ -8,7 +8,12 @@
 #input="a = foo(1,2); return a;"
 #input="adfoo(a,b){c=2; return a+b+c;} main(){a = adfoo(1,2); return a;}"
 #input="main(){a = 1; b = &a; *b=5; return a;}"
-input="main(){a = 1; y=x+1; return y;}"
+#input="main(){a = 1; y=x+1; return y;}"
+#input="int main(){ int a; a=3; return a; }"
+#input="int add(int x, int y){ return x+y; } int main(){ return add(2,3); }"
+#input="int main(){int a; a = 1; int b; b = &a; *b=5; return a;}"
+input="int set5(int *p){ *p = 5; return 0;} int main(){ int a; a = 1; set5(&a); return a;}"
+
 ./mini_cc "$input" > temp.s
 
 printf "<asm>\n"
