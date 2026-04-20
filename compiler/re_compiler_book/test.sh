@@ -5,7 +5,9 @@
 #input="a=1; while (a<5) a=a+1; if (a>8) return a; else return 0;"
 #input="a=1; i=4; for(a=1; a<10; a=a+1) i=i+a; return i;"
 #input="a=1; i=4; for(a=1; a<10; a=a+1) {i=i+a; i=i+1;} return i;"
-input="a = foo(1,2); return a;"
+#input="a = foo(1,2); return a;"
+#input="adfoo(a,b){c=2; return a+b+c;} main(){a = adfoo(1,2); return a;}"
+input="main(){a = 1; b = &a; *b=5; return a;}"
 ./mini_cc "$input" > temp.s
 
 printf "<asm>\n"

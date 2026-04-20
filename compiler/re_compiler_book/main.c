@@ -52,6 +52,7 @@ Token *token;
 typedef struct LVar LVar;
 struct LVar{
     LVar *next;
+    LVar *next_param;
     char *str;
     int len;
     int offset;
@@ -64,6 +65,8 @@ typedef enum{
     ND_SUB,
     ND_MUL,
     ND_DIV,
+    ND_ADDR,
+    ND_DEREF,
     ND_ASSIGN,
     ND_NUM,
     ND_LVAR,
@@ -84,6 +87,8 @@ static const char *nd_kind_name[] = {
     "ND_SUB",
     "ND_MUL",
     "ND_DIV",
+    "ND_ADDR",
+    "ND_DEREF",
     "ND_ASSIGN",
     "ND_NUM",
     "ND_LVAR",
@@ -179,6 +184,14 @@ int expect_num(){
     return val;
 }
 
+Token *expect_ident(){
+    if(token->kind!=TK_IDENT)
+        error("expect_ident is missed");
+    Token *tok = token;
+    token = token->next;
+    return tok;
+}
+
 bool at_eof(){
     return token->kind == TK_EOF;
 }
@@ -252,7 +265,7 @@ Token *tokenize(){
             continue;
         }
 
-        if(strchr("+-*/()<>=;{},", *p)){
+        if(strchr("+-*/()<>=;{},&", *p)){
             cur = new_token(TK_RESERVED, cur, p++, 1);
             continue;
         }
@@ -375,6 +388,10 @@ Node *unary(){
         return unary();
     }else if(consume("-")){
         return new_node(ND_SUB, new_node_num(0), unary());
+    }else if(consume("*")){
+        return new_node(ND_DEREF, unary(), NULL);
+    }else if(consume("&")){
+        return new_node(ND_ADDR, unary(), NULL);
     }else{
         return factor();
     }
@@ -544,14 +561,49 @@ Node *stmt(){
     return node;
 }
 
-Node *function(){
+Function *function(){
+    TRACE();
+    Function *fn=calloc(1, sizeof(Function));
+    Token *tok = expect_ident();
+    fn->name = tok->str;
+    fn->name_len = tok->len;
+    locals = NULL;
+
+    expect("(");
+    LVar *params_head = NULL;
+    LVar *params_cur = NULL;
+    while(!consume(")")){
+        Token *tok = expect_ident();
+        LVar *lvar = calloc(1, sizeof(LVar));
+        lvar->str = tok->str;
+        lvar->next = locals;
+        lvar->len = tok->len;
+        lvar->offset = locals ? locals->offset+8 : 8;
+        locals = lvar;
+
+        if(!params_head) params_head = lvar;
+        else params_cur->next_param = lvar;
+        params_cur = lvar;
+
+        if(consume(")")) break;
+        expect(",");
+    }
+    fn->params = params_head;
+
+    fn->body = stmt();
+    if(fn->body->kind != ND_BLOCK){
+        error("関数の本体が block じゃないよ！");
+    }
+
+    fn->locals = locals;
+    return fn;
 }
 
-Node *code[100];
+Function *code[100];
 int i = 0;
-void *program(){
+void program(){
     while(!at_eof()){
-        code[i++] = stmt();
+        code[i++] = function();
     }
 }
 
@@ -707,6 +759,17 @@ void gen(Node *node){
             emit_push("rax");
             return;
         }
+
+        case ND_ADDR:
+            gen_lval(node->lhs);
+            return;
+
+        case ND_DEREF:
+            gen(node->lhs);
+            emit_pop("rax");
+            printf("  mov rax, [rax]\n");
+            emit_push("rax");
+            return;
     }
 
     switch(node->kind){
@@ -776,6 +839,25 @@ void gen(Node *node){
     emit_push("rax");
 }
 
+void gen_func(Function *fn){
+    static char *registers[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
+    printf(".globl %.*s\n", fn->name_len, fn->name);
+    printf("%.*s:\n", fn->name_len, fn->name);
+    emit_push("rbp");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, 208\n");
+
+    int i = 0;
+    for(LVar *v = fn->params; v; v = v->next_param){
+        printf("  mov [rbp-%d], %s\n", v->offset, registers[i++]);
+    }
+    gen(fn->body);
+    printf("  mov rsp, rbp\n");
+    emit_pop("rbp");
+    printf("  ret\n");
+}
+
 
 int main(int argc, char **argv){
     if(argc != 2){
@@ -789,29 +871,19 @@ int main(int argc, char **argv){
     fprintf(stderr, "\n\n<Tokens>\n");
     dump_tokens();
 
-    printf(".intel_syntax noprefix\n");
-    printf(".globl main\n");
-    printf("main:\n");
-
-    emit_push("rbp");
-    printf("  mov rbp, rsp\n");
-    printf("  sub rsp, 208\n");
 
     fprintf(stderr, "\n<Parse>\n");
     program();
 
+    printf(".intel_syntax noprefix\n");
     int j = 0;
     while(j<i){
-        gen(code[j]);
-        emit_pop("rax");
+        gen_func(code[j]);
         fprintf(stderr, "\n<AST_%d>\n", j+1);
-        dump_ast_indent(code[j], 0);
+        dump_ast_indent(code[j]->body, 0);
         fprintf(stderr, "\n");
         j++;
     }
 
-    printf("  mov rsp, rbp\n");
-    emit_pop("rbp");
-    printf("  ret\n");
     printf(".section .note.GNU-stack,\"\",@progbits\n");
 }

@@ -8,28 +8,19 @@ main:
   sub rax, 8
   push rax
   push 1
-  push 2
-  pop rsi
-  pop rdi
-  call foo
-  push rax
   pop rdi
   pop rax
   mov [rax], rdi
   push rdi
   pop rax
   mov rax, rbp
+  sub rax, 16
+  push rax
+  mov rax, rbp
   sub rax, 8
   push rax
+  pop rdi
   pop rax
-  mov rax, [rax]
-  push rax
+  mov [rax], rdi
+  push rdi
   pop rax
-  mov rsp, rbp
-  pop rbp
-  ret
-  pop rax
-  mov rsp, rbp
-  pop rbp
-  ret
-.section .note.GNU-stack,"",@progbits
