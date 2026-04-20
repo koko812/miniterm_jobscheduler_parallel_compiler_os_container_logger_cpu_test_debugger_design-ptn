@@ -76,6 +76,7 @@ typedef enum{
     ND_FOR,
     ND_RETURN,
     ND_BLOCK,
+    ND_FUNCALL,
 } Nodekind;
 
 static const char *nd_kind_name[] = {
@@ -95,6 +96,7 @@ static const char *nd_kind_name[] = {
     "ND_FOR",
     "ND_RETURN",
     "ND_BLOCK",
+    "ND_FUNCALL",
 };
 
 typedef struct Node Node;
@@ -109,9 +111,22 @@ struct Node{
     Node *inc;
     Node *body;
     Node *next;
+    Node *args;
     LVar *var;
+    char *funcname;
     int val;
     int offset;
+    int funcname_len;
+};
+
+typedef struct Function Function;
+struct Function{
+    Function *next;
+    Node *body;
+    LVar *params;
+    LVar *locals;
+    char *name;
+    int name_len;
 };
 
 void error(char *s){
@@ -237,7 +252,7 @@ Token *tokenize(){
             continue;
         }
 
-        if(strchr("+-*/()<>=;{}", *p)){
+        if(strchr("+-*/()<>=;{},", *p)){
             cur = new_token(TK_RESERVED, cur, p++, 1);
             continue;
         }
@@ -301,6 +316,7 @@ LVar *find_LVar(Token *tok){
 }
 
 Node *add();
+Node *expr();
 
 Node *factor(){
     TRACE();
@@ -312,20 +328,40 @@ Node *factor(){
     Token *tok = consume_ident();
     if(tok){
         Node *node = calloc(1, sizeof(Node));
-        node->kind = ND_LVAR;
-        LVar *lvar = find_LVar(tok);
-        if(lvar){
-            node->offset = lvar->offset;
-            node->var = lvar;
+        if(consume("(")){
+            node->kind = ND_FUNCALL;
+            node->funcname = tok->str;
+            node->funcname_len = tok->len;
+            Node *head = NULL;
+            Node *cur = NULL;
+
+            while(!consume(")")){
+                Node* expr_node = expr();
+                if(!head) head = expr_node;
+                else cur->next = expr_node;
+                cur = expr_node;
+
+                if (consume(")")) break;
+                expect(",");
+            }
+            node->args = head;
+                
         }else{
-            lvar = calloc(1, sizeof(LVar));
-            lvar->str = tok->str;
-            lvar->next = locals;
-            lvar->len = tok->len;
-            lvar->offset = locals ? locals->offset+8 : 8;
-            node->offset = lvar->offset;
-            node->var = lvar;
-            locals = lvar;
+            node->kind = ND_LVAR;
+            LVar *lvar = find_LVar(tok);
+            if(lvar){
+                node->offset = lvar->offset;
+                node->var = lvar;
+            }else{
+                lvar = calloc(1, sizeof(LVar));
+                lvar->str = tok->str;
+                lvar->next = locals;
+                lvar->len = tok->len;
+                lvar->offset = locals ? locals->offset+8 : 8;
+                node->offset = lvar->offset;
+                node->var = lvar;
+                locals = lvar;
+            }
         }
         return node;
 
@@ -508,6 +544,9 @@ Node *stmt(){
     return node;
 }
 
+Node *function(){
+}
+
 Node *code[100];
 int i = 0;
 void *program(){
@@ -545,8 +584,6 @@ void dump_ast_prefix(Node *node){
 
 
 
-
-
 static int stack_depth=0;
 static void emit_push(char *reg){
     printf("  push %s\n", reg);
@@ -574,6 +611,8 @@ void gen_lval(Node *node){
 
 void gen(Node *node){
     static int cnt = 0;
+    static char *registers[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
     switch(node->kind){
         case ND_BLOCK: {
             Node *body = node->body;
@@ -652,6 +691,20 @@ void gen(Node *node){
             printf("  jmp .Lbegin%d\n", seq);
             printf(".Lend%d:\n", seq);
             emit_push_num(0);
+            return;
+        }
+
+        case ND_FUNCALL: {
+            int arg_cnt = 0;
+            for(Node *arg=node->args; arg; arg = arg->next){
+                gen(arg);
+                arg_cnt++;
+            }
+            for(int i=arg_cnt-1; i>=0; i--){
+                emit_pop(registers[i]);
+            }
+            printf("  call %.*s\n", node->funcname_len, node->funcname);
+            emit_push("rax");
             return;
         }
     }

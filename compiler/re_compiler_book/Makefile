@@ -5,13 +5,16 @@ OBJS=$(SRCS:.c=.o)
 mini_cc: $(OBJS)
 	$(CC) -o mini_cc $(OBJS)
 
+ext.o: ext.c
+	$(CC) -c ext.c -o ext.o
+
 run: mini_cc
 	./mini_cc
 
-run_args: mini_cc
+run_args: mini_cc ext.o
 	bash test.sh
 
 clean:
-	rm -f mini_cc $(OBJS) temps
+	rm -f mini_cc $(OBJS) temps ext.o
 
-.PHONY: run run_args clean 
+.PHONY: run ext.o run_args clean 
