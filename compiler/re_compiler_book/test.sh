@@ -15,7 +15,8 @@
 #input="int set5(int *p){ *p = 5; return 0;} int main(){ int a; a = 1; set5(&a); return a;}"
 #input="int main(){ int a; a = 1; int *b; b=&a; b=b+2; return b;}"
 #input="int main(){int *p; alloc4(&p, 1, 2, 4, 8); int *q; q = p + 2; *q=99; int *r; r = p+2; return *r;}"
-input="int main(){ int x; x=3; int *p; p=&x; int **pp; pp=&p; **pp=7; return x; }"
+#input="int main(){ int x; x=3; int *p; p=&x; int **pp; pp=&p; **pp=7; return x; }"
+input="int main(){int *x; x=3; return sizeof(x);}"
 
 
 

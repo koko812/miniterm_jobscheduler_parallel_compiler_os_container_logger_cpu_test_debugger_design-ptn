@@ -18,6 +18,7 @@ typedef enum{
     TK_RESERVED,
     TK_NUM,
     TK_INT,
+    TK_SIZEOF,
     TK_IDENT,
     TK_RETURN,
     TK_IF,
@@ -31,6 +32,7 @@ static const char *tk_kind_name[] = {
     "TK_RESERVED",
     "TK_NUM",
     "TK_INT",
+    "TK_SIZEOF",
     "TK_IDENT",
     "TK_RETURN",
     "TK_IF",
@@ -288,6 +290,12 @@ Token *tokenize(){
             continue;
         }
 
+        if((len = match_keyword(p, "sizeof"))){
+            cur = new_token(TK_SIZEOF, cur, p, len);
+            p += len;
+            continue;
+        }
+
         if(!strncmp(p, "==", 2) ||
             !strncmp(p, "!=", 2) ||
             !strncmp(p, ">=", 2) ||
@@ -493,6 +501,11 @@ Node *factor(){
 
 Node *unary(){
     TRACE();
+    if(consume_kw(TK_SIZEOF)){
+        Node *node = unary();
+        add_type(node);
+        return new_node_num(size_of(node->ty));
+    }
     if(consume("+")){
         return unary();
     }else if(consume("-")){
