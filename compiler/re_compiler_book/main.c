@@ -351,28 +351,73 @@ Type *ptr_to(Type *base){
     return new_type(TY_PTR, base);
 }
 
+int size_of(Type *ty){
+    switch (ty->kind)
+    {
+    case TY_INT:
+        return 4;
+    case TY_PTR:
+        return 8;
+    }
+}
+
 void add_type(Node *node){
     if(!node) return;
+
     add_type(node->lhs);
     add_type(node->rhs);
+    add_type(node->cond);
+    add_type(node->then);
+    add_type(node->els);
+    add_type(node->init);
+    add_type(node->inc);
+    add_type(node->body);
+    add_type(node->next);
+    add_type(node->args);
 
     switch(node->kind){
         case ND_NUM:
             node->ty = int_type();
             return;
+
         case ND_LVAR:
             node->ty = node->var->ty;
             return;
+
         case ND_ASSIGN:
             node->ty = node->lhs->ty;
             return;
+
         case ND_ADDR:
             node->ty = ptr_to(node->lhs->ty);
             return;
+
         case ND_DEREF:
             if(node->lhs->ty->kind != TY_PTR)
                 error("ポインタ型じゃないよ！");
             node->ty = node->lhs->ty->ptr_to;
+            return;
+
+        case ND_ADD:
+            if(node->lhs->ty->kind == TY_PTR && node->rhs->ty->kind == TY_INT)
+                node->ty = node->lhs->ty;
+            else if(node->lhs->ty->kind == TY_INT && node->rhs->ty->kind == TY_PTR)
+                node->ty = node->rhs->ty;
+            else if(node->lhs->ty->kind == TY_INT && node->rhs->ty->kind == TY_INT)
+                node->ty = int_type();
+            else
+                error("ダメな演算だよ");
+            return;
+
+        case ND_SUB:
+            if(node->lhs->ty->kind == TY_PTR && node->rhs->ty->kind == TY_INT)
+                node->ty = node->lhs->ty;
+            else if(node->lhs->ty->kind == TY_INT && node->rhs->ty->kind == TY_PTR)
+                error("ダメな演算だよ");
+            else if(node->lhs->ty->kind == TY_INT && node->rhs->ty->kind == TY_INT)
+                node->ty = int_type();
+            else
+                error("ダメな演算だよ");
             return;
     }
 }
@@ -924,9 +969,18 @@ void gen(Node *node){
 
     switch (node->kind){
         case ND_ADD:
+            if(node->lhs->ty->kind==TY_PTR){
+                printf("  imul rdi, %d\n", size_of(node->lhs->ty->ptr_to));
+            }
+            if(node->rhs->ty->kind==TY_PTR){
+                printf("  imul rax, %d\n", size_of(node->rhs->ty->ptr_to));
+            }
             printf("  add rax, rdi\n");
             break;
         case ND_SUB:
+            if(node->lhs->ty->kind==TY_PTR){
+                printf("  imul rdi, %d\n", size_of(node->lhs->ty->ptr_to));
+            }
             printf("  sub rax, rdi\n");
             break;
         case ND_MUL:
